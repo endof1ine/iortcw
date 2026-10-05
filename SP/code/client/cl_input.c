@@ -455,6 +455,41 @@ void CL_JoystickMove( usercmd_t *cmd ) {
 		anglespeed = 0.001 * cls.frametime;
 	}
 
+#ifdef __SWITCH__
+	/* the look stick as Halo's on the Xbox: its push squared (j_lookCurve), so
+	a small one aims finely, up to j_yawSpeed and j_pitchSpeed degrees a
+	second, and held all the way sideways it speeds up to j_lookBoost times
+	that within 0.3 seconds. (Stock: linear, about 720 degrees a second.) The
+	directions stay j_yaw's and j_pitch's. */
+	{
+		static cvar_t *lookCurve, *yawSpeed, *pitchSpeed, *lookBoost;
+		static float boost = 1.0f;
+		float seconds = cls.frametime * 0.001f;
+		float yawPush = cl.joystickAxis[j_yaw_axis->integer] / 32767.0f;
+		float pitchPush = cl.joystickAxis[j_pitch_axis->integer] / 32767.0f;
+
+		if ( !lookCurve ) {
+			lookCurve = Cvar_Get( "j_lookCurve", "2", CVAR_ARCHIVE );
+			yawSpeed = Cvar_Get( "j_yawSpeed", "180", CVAR_ARCHIVE );
+			pitchSpeed = Cvar_Get( "j_pitchSpeed", "100", CVAR_ARCHIVE );
+			lookBoost = Cvar_Get( "j_lookBoost", "1.5", CVAR_ARCHIVE );
+		}
+		if ( fabs( yawPush ) > 0.95f && lookBoost->value > 1.0f ) {
+			boost += seconds / 0.3f * ( lookBoost->value - 1.0f );
+			if ( boost > lookBoost->value )
+				boost = lookBoost->value;
+		} else {
+			boost = 1.0f;
+		}
+		yaw = ( j_yaw->value < 0 ? -1.0f : 1.0f ) * ( yawPush < 0 ? -1.0f : 1.0f ) *
+			pow( fabs( yawPush ), lookCurve->value ) * yawSpeed->value * boost;
+		pitch = ( j_pitch->value < 0 ? -1.0f : 1.0f ) * ( pitchPush < 0 ? -1.0f : 1.0f ) *
+			pow( fabs( pitchPush ), lookCurve->value ) * pitchSpeed->value;
+		// (degrees a second: anglespeed is the frame's seconds)
+		anglespeed = seconds;
+	}
+#endif
+
 	if ( !kb[KB_STRAFE].active ) {
 		cl.viewangles[YAW] += anglespeed * yaw;
 		cmd->rightmove = ClampChar( cmd->rightmove + (int)right );
