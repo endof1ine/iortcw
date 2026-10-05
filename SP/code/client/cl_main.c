@@ -2927,8 +2927,8 @@ void CL_Frame( int msec ) {
 	}
 
 #ifdef __SWITCH__
-	// (loading done: in the menus, or the level running)
-	if ( clc.state == CA_DISCONNECTED || clc.state == CA_ACTIVE ) {
+	// (loading done: in the menus, a movie or the level running)
+	if ( clc.state == CA_DISCONNECTED || clc.state == CA_CINEMATIC || clc.state == CA_ACTIVE ) {
 		Sys_SwitchCpuBoost( qfalse );
 	}
 #endif

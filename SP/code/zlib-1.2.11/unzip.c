@@ -108,7 +108,12 @@
 
 
 #ifndef UNZ_BUFSIZE
+#ifdef __SWITCH__
+/* (fewer, larger reads of the SD card, each a file service call) */
+#define UNZ_BUFSIZE (65536)
+#else
 #define UNZ_BUFSIZE (16384)
+#endif
 #endif
 
 #ifndef UNZ_MAXFILENAMEINZIP
@@ -631,7 +636,24 @@ local unzFile unzOpenInternal (const void *path,
     if (us.filestream==NULL)
         return NULL;
 
+#ifdef __SWITCH__
+    /* (zip64's locator, when there is one, sits just before the end record:
+       looked for there, not by reading the last 64 KB backwards, slow on the
+       SD card for each sound's own handle on its pak) */
+    {
+        ZPOS64_T end = unz64local_SearchCentralDir(&us.z_filefunc,us.filestream);
+        uLong signature;
+
+        central_pos = 0;
+        if (end >= 20 &&
+            ZSEEK64(us.z_filefunc, us.filestream, end - 20, ZLIB_FILEFUNC_SEEK_SET) == 0 &&
+            unz64local_getLong(&us.z_filefunc, us.filestream, &signature) == UNZ_OK &&
+            signature == 0x07064b50)
+            central_pos = unz64local_SearchCentralDir64(&us.z_filefunc,us.filestream);
+    }
+#else
     central_pos = unz64local_SearchCentralDir64(&us.z_filefunc,us.filestream);
+#endif
     if (central_pos)
     {
         uLong uS;
