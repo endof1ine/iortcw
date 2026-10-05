@@ -2296,6 +2296,15 @@ void CL_KeyDownEvent( int key, unsigned time )
 		return;
 	}
 
+#ifdef __SWITCH__
+	// (the controller's face buttons, - and + skip movies and cutscenes as
+	// Enter does; not the triggers, held while firing as one starts)
+	if ( key >= K_PAD0_A && key <= K_PAD0_START && !( Key_GetCatcher( ) & ( KEYCATCH_UI | KEYCATCH_CONSOLE ) ) &&
+		( cl.cameraMode || clc.state == CA_CINEMATIC ) ) {
+		key = K_ENTER;
+	}
+#endif
+
 //----(SA)	added
 	if ( cl.cameraMode ) {
 		if ( !( Key_GetCatcher( ) & ( KEYCATCH_UI | KEYCATCH_CONSOLE ) ) ) {    // let menu/console handle keys if necessary
@@ -2339,6 +2348,13 @@ void CL_KeyDownEvent( int key, unsigned time )
 //----(SA)	get the active menu if in ui mode
 	if ( Key_GetCatcher( ) & KEYCATCH_UI ) {
 		activeMenu = VM_Call( uivm, UI_GET_ACTIVE_MENU );
+#ifdef __SWITCH__
+		// (the briefing after a level loads: any button or a touch starts the
+		// level, as the UI's Enter, ui_main.c)
+		if ( activeMenu == UIMENU_PREGAME ) {
+			key = K_ENTER;
+		}
+#endif
 	}
 
 	// escape is always handled special
@@ -2385,7 +2401,11 @@ void CL_KeyDownEvent( int key, unsigned time )
 			// any key gets out of clipboard
 			key = K_ESCAPE;
 		} else if ( activeMenu == UIMENU_PREGAME ) {
+#ifdef __SWITCH__
+			if ( key != K_ENTER ) {
+#else
 			if ( key != K_MOUSE1 ) {
+#endif
 				return; // eat all keys except mouse click
 			}
 		} else {

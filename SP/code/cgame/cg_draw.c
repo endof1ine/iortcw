@@ -2486,7 +2486,7 @@ static void CG_DrawCrosshair( void ) {
 	}
 #ifdef __SWITCH__
 	// (Halo's: red on an enemy under the aim, cg_view.c's CG_AimAssist)
-	if ( cg.aimTarget >= 0 && !friendInSights ) {
+	if ( cg.aimOnTarget && !friendInSights ) {
 		hcolor[0] = 1.0f;
 		hcolor[1] = hcolor[2] = 0.15f;
 		trap_R_SetColor( hcolor );

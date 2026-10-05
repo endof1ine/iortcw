@@ -1471,7 +1471,8 @@ static int CG_AimTarget( vec3_t targetPoint ) {
 		float distance, cone, dot;
 		trace_t trace;
 
-		if ( !cent->currentValid || i == cg.snap->ps.clientNum || aiChar == AICHAR_NONE ||
+		if ( !cent->currentValid || i == cg.snap->ps.clientNum || cent->currentState.eType != ET_PLAYER ||
+			( cent->currentState.eFlags & EF_NODRAW ) || aiChar == AICHAR_NONE ||
 			aiChar == AICHAR_AMERICAN || aiChar == AICHAR_PARTISAN || aiChar == AICHAR_CIVILIAN ||
 			( cent->currentState.eFlags & EF_DEAD ) ) {
 			continue;
@@ -1521,13 +1522,20 @@ static void CG_AimAssist( void ) {
 	vec3_t point, dir, angles;
 
 	cg.aimTarget = cg.snap ? CG_AimTarget( point ) : -1;
+	cg.aimOnTarget = qfalse;
 	if ( cg.aimTarget >= 0 ) {
 		vec2_t offset;
+		float along, across;
+
+		// (on the body itself, not just near it: the red crosshair)
+		VectorSubtract( point, cg.refdef.vieworg, dir );
+		along = DotProduct( dir, cg.refdef.viewaxis[0] );
+		across = sqrt( MAX( 0.0f, DotProduct( dir, dir ) - along * along ) );
+		cg.aimOnTarget = across <= 18.0f || across <= along * tan( DEG2RAD( 1.0f ) );
 
 		if ( cg_aimFriction.value > 0.0f && cg_aimFriction.value < 1.0f ) {
 			cg.zoomSensitivity *= cg_aimFriction.value;
 		}
-		VectorSubtract( point, cg.refdef.vieworg, dir );
 		vectoangles( dir, angles );
 		offset[0] = AngleSubtract( angles[YAW], cg.refdefViewAngles[YAW] );
 		offset[1] = AngleSubtract( angles[PITCH], cg.refdefViewAngles[PITCH] );

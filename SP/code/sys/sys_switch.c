@@ -504,6 +504,51 @@ int Sys_SwitchDocked( void )
 }
 
 /*
+==============
+Sys_SwitchRumble
+
+The controller's motors, low (160 Hz) and high (320 Hz) from 0 to 1, until
+the next call: HD rumble straight from libnx, SDL's Switch rumble being
+broken (no handles for the first controller, amplitudes out of range).
+Handheld and the first controller both, whichever is connected
+==============
+*/
+void Sys_SwitchRumble( float low, float high )
+{
+	static const HidNpadIdType ids[2] = { HidNpadIdType_Handheld, HidNpadIdType_No1 };
+	static HidVibrationDeviceHandle handles[2][2];
+	static u32 styles[2];
+	static s32 counts[2];
+	HidVibrationValue values[2];
+	int i;
+
+	values[0].amp_low = low;
+	values[0].freq_low = 160.0f;
+	values[0].amp_high = high;
+	values[0].freq_high = 320.0f;
+	values[1] = values[0];
+	for ( i = 0; i < 2; i++ ) {
+		u32 style = hidGetNpadStyleSet( ids[i] );
+
+		if ( !style ) {
+			continue;
+		}
+		if ( style != styles[i] ) {
+			// (two motors, one per side; one on a single Joy-Con)
+			counts[i] = 2;
+			if ( R_FAILED( hidInitializeVibrationDevices( handles[i], 2, ids[i], style ) ) ) {
+				counts[i] = 1;
+				if ( R_FAILED( hidInitializeVibrationDevices( handles[i], 1, ids[i], style ) ) ) {
+					continue;
+				}
+			}
+			styles[i] = style;
+		}
+		hidSendVibrationValues( handles[i], values, counts[i] );
+	}
+}
+
+/*
 ==============================================================
 
 THE GAME MODULES, LINKED IN

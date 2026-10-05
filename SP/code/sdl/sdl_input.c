@@ -827,25 +827,54 @@ static void IN_SwitchTouchFrame( void )
 IN_SwitchRumble_f
 
 "rumble <low> <high> <milliseconds>": the controller's motors (0 to 1 each),
-for the cgame's firing, damage and explosions, scaled by in_rumble (0 off)
+for the cgame's firing, damage and explosions, scaled by in_rumble (0 off).
+One still playing keeps its stronger motors and its end
 =================
 */
+void Sys_SwitchRumble( float low, float high );
+static struct {
+	float low, high;
+	int end;
+} switchRumble;
+
 static void IN_SwitchRumble_f( void )
 {
 	cvar_t *rumble = Cvar_Get( "in_rumble", "1", CVAR_ARCHIVE );
+	int now = Sys_Milliseconds( );
 	float low, high;
 	int ms;
 
-	if ( !gamepad || Cmd_Argc( ) < 4 || rumble->value <= 0.0f )
+	if ( Cmd_Argc( ) < 4 || rumble->value <= 0.0f )
 		return;
 	low = atof( Cmd_Argv( 1 ) ) * rumble->value;
 	high = atof( Cmd_Argv( 2 ) ) * rumble->value;
 	ms = atoi( Cmd_Argv( 3 ) );
-	low = low < 0.0f ? 0.0f : low > 1.0f ? 1.0f : low;
-	high = high < 0.0f ? 0.0f : high > 1.0f ? 1.0f : high;
 	if ( ms <= 0 )
 		return;
-	SDL_GameControllerRumble( gamepad, (Uint16)( low * 65535.0f ), (Uint16)( high * 65535.0f ), ms );
+	if ( switchRumble.end > now ) {
+		low = MAX( low, switchRumble.low );
+		high = MAX( high, switchRumble.high );
+		ms = MAX( ms, switchRumble.end - now );
+	}
+	switchRumble.low = low < 0.0f ? 0.0f : low > 1.0f ? 1.0f : low;
+	switchRumble.high = high < 0.0f ? 0.0f : high > 1.0f ? 1.0f : high;
+	switchRumble.end = now + ms;
+	Sys_SwitchRumble( switchRumble.low, switchRumble.high );
+}
+
+/*
+=================
+IN_SwitchRumbleFrame
+
+The motors stopped when the last rumble ends, or at once (force: shutdown)
+=================
+*/
+static void IN_SwitchRumbleFrame( qboolean force )
+{
+	if ( switchRumble.end && ( force || Sys_Milliseconds( ) >= switchRumble.end ) ) {
+		Sys_SwitchRumble( 0.0f, 0.0f );
+		switchRumble.end = 0;
+	}
 }
 #endif
 
@@ -1446,6 +1475,7 @@ void IN_Frame( void )
 
 #ifdef __SWITCH__
 	IN_SwitchTouchFrame( );
+	IN_SwitchRumbleFrame( qfalse );
 #endif
 	IN_ProcessEvents( );
 
@@ -1525,6 +1555,7 @@ void IN_Shutdown( void )
 {
 #ifdef __SWITCH__
 	Cmd_RemoveCommand( "rumble" );
+	IN_SwitchRumbleFrame( qtrue );
 #endif
 	SDL_StopTextInput( );
 
