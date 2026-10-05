@@ -1383,6 +1383,12 @@ static void IN_ProcessEvents( void )
 
 			case SDL_CONTROLLERDEVICEADDED:
 			case SDL_CONTROLLERDEVICEREMOVED:
+#ifdef __SWITCH__
+				// (SDL's Switch driver lists all 8 pads at start, an event
+				// each, and never removes one: the first one open is kept)
+				if (gamepad)
+					break;
+#endif
 				if (in_joystick->integer)
 					IN_InitJoystick();
 				break;
