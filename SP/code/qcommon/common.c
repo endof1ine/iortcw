@@ -1959,6 +1959,10 @@ void Com_ExecuteCfg(void)
 	}
 #ifdef __SWITCH__
 	Key_SwitchDefaultBinds( );
+	// (a 16:9 screen: the menus, the HUD and the movies at their own 4:3,
+	// not stretched, unless a config says otherwise; the modules' own
+	// defaults leave a value that is there)
+	Cvar_Get( "cg_fixedAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
 #endif
 }
 
