@@ -486,6 +486,10 @@ Sys_UnloadDll
 */
 void Sys_UnloadDll( void *dllHandle )
 {
+#ifdef __SWITCH__
+	// (a linked-in game module: sys_switch.c)
+	return;
+#endif
 	if( !dllHandle )
 	{
 		Com_Printf("Sys_UnloadDll(NULL)\n");
@@ -578,6 +582,11 @@ Sys_LoadGameDll
 Used to load a development dll instead of a virtual machine
 =================
 */
+#ifdef __SWITCH__
+void *Sys_SwitchLoadGameModule( const char *path, vmMainProc *entryPoint,
+	intptr_t ( *systemcalls )( intptr_t, ... ) );
+#endif
+
 void *Sys_LoadGameDll(const char *name,
 	vmMainProc *entryPoint,
 	intptr_t (*systemcalls)(intptr_t, ...))
@@ -586,6 +595,11 @@ void *Sys_LoadGameDll(const char *name,
 	void (*dllEntry)(intptr_t (*syscallptr)(intptr_t, ...));
 
 	assert(name);
+
+#ifdef __SWITCH__
+	// (the game modules are linked in: sys_switch.c)
+	return Sys_SwitchLoadGameModule( name, entryPoint, systemcalls );
+#endif
 
 	if(!Sys_DllExtension(name))
 	{

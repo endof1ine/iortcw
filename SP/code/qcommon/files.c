@@ -1702,7 +1702,12 @@ int FS_FindVM(void **startSearch, char *found, int foundlen, const char *name, i
 			{
 				netpath = FS_BuildOSPath(dir->path, dir->gamedir, dllName);
 
+#ifdef __SWITCH__
+				// (the game modules are linked in, not files: sys_switch.c)
+				if(qtrue)
+#else
 				if(FS_FileInPathExists(netpath))
+#endif
 				{
 					Q_strncpyz(found, netpath, foundlen);
 					*startSearch = search;

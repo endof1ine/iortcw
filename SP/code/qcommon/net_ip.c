@@ -73,12 +73,23 @@ static qboolean	winsockInitialized = qfalse;
 #	include <sys/types.h>
 #	include <sys/time.h>
 #	include <unistd.h>
-#	if !defined(__sun) && !defined(__sgi)
+#	if !defined(__sun) && !defined(__sgi) && !defined(__SWITCH__)
 #		include <ifaddrs.h>
 #	endif
 
 #	ifdef __sun
 #		include <sys/filio.h>
+#	endif
+
+#	ifdef __SWITCH__
+/* libnx's sockets have no IPv6 multicast: its structure, for the code that
+asks for it (whose setsockopt then fails, as without IPv6) */
+struct ipv6_mreq
+{
+	struct in6_addr ipv6mr_multiaddr;
+	unsigned int ipv6mr_interface;
+};
+#		define if_nametoindex(name) 0
 #	endif
 
 typedef int SOCKET;

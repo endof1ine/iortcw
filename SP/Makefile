@@ -52,6 +52,26 @@ PLATFORM=$(COMPILE_PLATFORM)
 endif
 export PLATFORM
 
+# The Nintendo Switch, a libnx homebrew program (make PLATFORM=switch, with
+# devkitPro): one executable, the renderer and the game modules linked in
+# (no dynamic loading), OpenGL ES 1 through SDL2 and Mesa, no network extras
+ifeq ($(PLATFORM),switch)
+  ARCH=aarch64
+  USE_OPENGLES=1
+  USE_RENDERER_DLOPEN=0
+  BUILD_RENDERER_REND2=0
+  BUILD_SERVER=0
+  USE_OPENAL=0
+  USE_CURL=0
+  USE_VOIP=0
+  USE_CODEC_OPUS=0
+  USE_MUMBLE=0
+  BUILD_GAME_SO=0
+  BUILD_GAME_QVM=0
+  # (the game's folder on the SD card, wherever the program is started from)
+  DEFAULT_BASEDIR=/switch/iortcw
+endif
+
 ifeq ($(PLATFORM),mingw32)
   MINGW=1
 endif
@@ -363,6 +383,46 @@ CLIENT_EXTRA_FILES=
 ifneq (,$(findstring "$(COMPILE_PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu" "gnu"))
   TOOLS_CFLAGS += -DARCH_STRING=\"$(COMPILE_ARCH)\"
 endif
+
+ifeq ($(PLATFORM),switch)
+
+#############################################################################
+# SETUP AND BUILD -- NINTENDO SWITCH (libnx homebrew; devkitPro's devkitA64,
+# libnx, switch-sdl2 and switch-mesa)
+#############################################################################
+
+  DEVKITPRO ?= /opt/devkitpro
+  SWITCH_PORTLIBS = $(DEVKITPRO)/portlibs/switch
+  SWITCH_BIN = $(DEVKITPRO)/devkitA64/bin/aarch64-none-elf-
+  CC = $(SWITCH_BIN)gcc
+  CXX = $(SWITCH_BIN)g++
+  RANLIB = $(SWITCH_BIN)gcc-ranlib
+  SWITCH_ARCH_FLAGS = -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
+
+  BASE_CFLAGS = -Wall -fno-strict-aliasing -D__SWITCH__ $(SWITCH_ARCH_FLAGS) \
+    -ftls-model=local-exec -I$(SWITCH_PORTLIBS)/include -isystem $(DEVKITPRO)/libnx/include \
+    -DARCH_STRING=\\\"$(FILE_ARCH)\\\" -DUSE_OPENGLES
+  # (minizip: newlib's fopen and fseeko are already 64-bit)
+  BASE_CFLAGS += -DIOAPI_NO_64
+  CLIENT_CFLAGS += -I$(SWITCH_PORTLIBS)/include/SDL2 -D_REENTRANT
+  OPTIMIZEVM = -O2
+  OPTIMIZE = $(OPTIMIZEVM) -ffast-math
+
+  LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(SWITCH_ARCH_FLAGS)
+  BINEXT = .elf
+  SHLIBEXT = a
+  SHLIBCFLAGS =
+  SHLIBLDFLAGS =
+
+  THREAD_LIBS = -lpthread
+  LIBS = -lm
+  SDL_LIBS = -L$(SWITCH_PORTLIBS)/lib -lSDL2 -L$(DEVKITPRO)/libnx/lib -lEGL -lglapi -ldrm_nouveau \
+    -lstdc++ -lnx -lpthread
+  CLIENT_LIBS = $(SDL_LIBS)
+  RENDERER_LIBS = $(SDL_LIBS)
+  SERVER_LIBS =
+
+else # ifeq switch
 
 ifneq (,$(findstring "$(PLATFORM)", "linux" "gnu_kfreebsd" "kfreebsd-gnu" "gnu"))
   BASE_CFLAGS = -Wall -fno-strict-aliasing \
@@ -1046,6 +1106,7 @@ endif #OpenBSD
 endif #NetBSD
 endif #IRIX
 endif #SunOS
+endif #switch
 
 ifndef CC
   CC=gcc
@@ -1842,7 +1903,7 @@ Q3OBJ = \
   $(B)/client/con_log.o \
   $(B)/client/sys_main.o
 
-ifdef MINGW
+ifneq ($(or $(MINGW),$(filter switch,$(PLATFORM))),)
   Q3OBJ += \
     $(B)/client/con_passive.o
 else
@@ -2306,8 +2367,17 @@ ifdef MINGW
     $(B)/client/win_resource.o \
     $(B)/client/sys_win32.o
 else
+ifeq ($(PLATFORM),switch)
+  # (the game modules, linked in: sys_switch.c hands out their entry points)
+  Q3OBJ += \
+    $(B)/client/sys_switch.o \
+    $(B)/$(BASEGAME)/cgame_switch.o \
+    $(B)/$(BASEGAME)/qagame_switch.o \
+    $(B)/$(BASEGAME)/ui_switch.o
+else
   Q3OBJ += \
     $(B)/client/sys_unix.o
+endif
 endif
 
 ifeq ($(PLATFORM),darwin)
@@ -2903,6 +2973,32 @@ $(B)/$(BASEGAME)/qcommon/%.o: $(CMDIR)/%.c
 $(B)/$(BASEGAME)/qcommon/%.asm: $(CMDIR)/%.c $(Q3LCC)
 	$(DO_Q3LCC)
 
+
+# the Switch: a game module linked into the executable, its objects in one
+# with only dllEntry and vmMain global, as <module>_dllEntry and
+# <module>_vmMain (the three modules each have their own of both, and of
+# q_shared.c's functions)
+ifeq ($(PLATFORM),switch)
+define SWITCH_MODULE_RULE
+$(B)/$(BASEGAME)/$(1)_switch.o: $(2)
+	$$(echo_cmd) "LD $$@"
+	$$(Q)$(SWITCH_BIN)ld -r -o $$@ $(2)
+	$$(Q)$(SWITCH_BIN)objcopy --keep-global-symbol=dllEntry --keep-global-symbol=vmMain $$@
+	$$(Q)$(SWITCH_BIN)objcopy --redefine-sym dllEntry=$(1)_dllEntry --redefine-sym vmMain=$(1)_vmMain $$@
+endef
+$(eval $(call SWITCH_MODULE_RULE,cgame,$$(Q3CGOBJ)))
+$(eval $(call SWITCH_MODULE_RULE,qagame,$$(Q3GOBJ)))
+$(eval $(call SWITCH_MODULE_RULE,ui,$$(Q3UIOBJ)))
+
+# the homebrew program: the executable, its title and its icon
+TARGETS += $(B)/iortcw.nro
+$(B)/iortcw.nro: $(B)/$(CLIENTBIN)$(FULLBINEXT) misc/wolf512.png
+	$(echo_cmd) "NRO $@"
+	$(Q)convert misc/wolf512.png -resize 256x256 -background black -flatten -quality 90 $(B)/iortcw_icon.jpg
+	$(Q)$(DEVKITPRO)/tools/bin/nacptool --create "Return to Castle Wolfenstein" "iortcw" "$(VERSION)" \
+		$(B)/iortcw.nacp > /dev/null
+	$(Q)$(DEVKITPRO)/tools/bin/elf2nro $< $@ --nacp=$(B)/iortcw.nacp --icon=$(B)/iortcw_icon.jpg > /dev/null
+endif
 
 #############################################################################
 # MISC

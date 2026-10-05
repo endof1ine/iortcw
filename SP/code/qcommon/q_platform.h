@@ -165,6 +165,25 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #endif
 
+//================================================================ SWITCH ===
+
+#if defined(__SWITCH__)
+
+#define OS_STRING "switch"
+#define ID_INLINE inline
+#define PATH_SEP '/'
+
+#if !defined(ARCH_STRING)
+# error ARCH_STRING should be defined by the Makefile
+#endif
+
+#define Q3_LITTLE_ENDIAN
+
+// (no dynamic loading: the game modules are linked in, sys_switch.c)
+#define DLL_EXT ".a"
+
+#endif
+
 //================================================================= LINUX ===
 
 #if defined(__linux__) || defined(__FreeBSD_kernel__) || defined(__GNU__)
