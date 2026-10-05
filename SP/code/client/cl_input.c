@@ -260,6 +260,13 @@ void IN_KickUp( void ) {IN_KeyUp( &kb[KB_KICK] );}
 void IN_SprintDown( void ) {IN_KeyDown( &kb[KB_BUTTONS5] );}
 void IN_SprintUp( void ) {IN_KeyUp( &kb[KB_BUTTONS5] );}
 
+#ifdef __SWITCH__
+// sprint toggled by a click of the left stick (the Switch's L3), as consoles'
+// games have it: until clicked again, or the stick is let go (CL_JoystickMove)
+static qboolean in_sprintToggled;
+void IN_SprintToggle( void ) {in_sprintToggled = !in_sprintToggled;}
+#endif
+
 
 // wbuttons (wolf buttons)
 void IN_Wbutton0Down( void )  { IN_KeyDown( &kb[KB_WBUTTONS0] );    }   //----(SA) secondary fire button
@@ -488,6 +495,20 @@ void CL_JoystickMove( usercmd_t *cmd ) {
 		// (degrees a second: anglespeed is the frame's seconds)
 		anglespeed = seconds;
 	}
+	/* moving as Halo's on the Xbox: the stick's push the speed (all of it
+	running, 127; the stock j_forward and j_side reach that at a twentieth of
+	it), directions j_forward's and j_side's; a toggled sprint ends when the
+	stick is let go */
+	{
+		float forwardPush = cl.joystickAxis[j_forward_axis->integer] / 32767.0f;
+		float sidePush = cl.joystickAxis[j_side_axis->integer] / 32767.0f;
+
+		forward = ( j_forward->value < 0 ? -1.0f : 1.0f ) * forwardPush * 127.0f;
+		right = ( j_side->value < 0 ? -1.0f : 1.0f ) * sidePush * 127.0f;
+		if ( forwardPush * forwardPush + sidePush * sidePush < 0.3f * 0.3f ) {
+			in_sprintToggled = qfalse;
+		}
+	}
 #endif
 
 	if ( !kb[KB_STRAFE].active ) {
@@ -620,6 +641,11 @@ void CL_CmdButtons( usercmd_t *cmd ) {
 		}
 		kb[KB_BUTTONS0 + i].wasPressed = qfalse;
 	}
+#ifdef __SWITCH__
+	if ( in_sprintToggled ) {
+		cmd->buttons |= 1 << 5;     // (+sprint's, KB_BUTTONS5)
+	}
+#endif
 
 	for ( i = 0 ; i < 7 ; i++ ) {
 		if ( kb[KB_WBUTTONS0 + i].active || kb[KB_WBUTTONS0 + i].wasPressed ) {
@@ -1090,6 +1116,9 @@ void CL_InitInput( void ) {
 
 	Cmd_AddCommand( "+sprint", IN_SprintDown );
 	Cmd_AddCommand( "-sprint", IN_SprintUp );
+#ifdef __SWITCH__
+	Cmd_AddCommand( "togglesprint", IN_SprintToggle );
+#endif
 
 
 	// wolf buttons
@@ -1182,6 +1211,9 @@ void CL_ShutdownInput(void)
 
 	Cmd_RemoveCommand("+sprint");
 	Cmd_RemoveCommand("-sprint");
+#ifdef __SWITCH__
+	Cmd_RemoveCommand("togglesprint");
+#endif
 
 	Cmd_RemoveCommand("+attack2");
 	Cmd_RemoveCommand("-attack2");

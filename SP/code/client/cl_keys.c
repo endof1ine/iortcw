@@ -2011,7 +2011,7 @@ void Key_SwitchDefaultBinds( void )
 		{ "PAD0_B", "+movedown" },
 		{ "PAD0_X", "+reload" },
 		{ "PAD0_Y", "+activate" },
-		{ "PAD0_LEFTSTICK_CLICK", "+sprint" },
+		{ "PAD0_LEFTSTICK_CLICK", "togglesprint" },
 		{ "PAD0_RIGHTSTICK_CLICK", "+kick" },
 		{ "PAD0_DPAD_LEFT", "+leanleft" },
 		{ "PAD0_DPAD_RIGHT", "+leanright" },
