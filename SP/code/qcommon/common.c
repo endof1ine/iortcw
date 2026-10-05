@@ -1963,6 +1963,10 @@ void Com_ExecuteCfg(void)
 	// not stretched, unless a config says otherwise; the modules' own
 	// defaults leave a value that is there)
 	Cvar_Get( "cg_fixedAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
+	// (full texture detail: picmip 1, half of it, was for the graphics cards
+	// of 2001; the menus' texture quality changes it)
+	Cvar_Get( "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH );
+	Cvar_Get( "r_picmip2", "0", CVAR_ARCHIVE | CVAR_LATCH );
 #endif
 }
 
