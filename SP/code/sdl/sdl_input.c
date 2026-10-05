@@ -1500,6 +1500,8 @@ void IN_Init( void *windowData )
 #else
 	// (the touchscreen is read as itself, IN_SwitchTouch: not also as a mouse)
 	SDL_SetHint( SDL_HINT_TOUCH_MOUSE_EVENTS, "0" );
+	// (IN_Init reruns on renderer and input restarts without IN_Shutdown)
+	Cmd_RemoveCommand( "rumble" );
 	Cmd_AddCommand( "rumble", IN_SwitchRumble_f );
 #endif
 
