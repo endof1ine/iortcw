@@ -666,6 +666,27 @@ arrows; + is escape everywhere (the menu, as the keyboard's). 0: the pad's own
 key.
 =================
 */
+/*
+=================
+IN_SwitchLabelButton
+
+SDL names the Switch's buttons by their places on an Xbox controller (its
+"A" is the bottom one, the Switch's B): the button by its label on the
+Switch, so A confirms, B goes back, and PAD0_A is the A button
+=================
+*/
+static int IN_SwitchLabelButton( int button )
+{
+	switch ( button )
+	{
+		case SDL_CONTROLLER_BUTTON_A: return SDL_CONTROLLER_BUTTON_B;
+		case SDL_CONTROLLER_BUTTON_B: return SDL_CONTROLLER_BUTTON_A;
+		case SDL_CONTROLLER_BUTTON_X: return SDL_CONTROLLER_BUTTON_Y;
+		case SDL_CONTROLLER_BUTTON_Y: return SDL_CONTROLLER_BUTTON_X;
+		default:                      return button;
+	}
+}
+
 static int IN_SwitchMenuKey( int button )
 {
 	if ( button == SDL_CONTROLLER_BUTTON_START )
@@ -727,6 +748,50 @@ static void IN_SwitchMenuCursor( void )
 }
 #endif
 
+#ifdef __SWITCH__
+/*
+=================
+IN_SwitchTouch
+
+The touchscreen in the menus: a finger puts the cursor where it is (the menus'
+640x480, stretched over the screen: to the corner, then there, as the menus
+take only movement) and presses the mouse's button until it lifts
+=================
+*/
+static void IN_SwitchTouch( const SDL_TouchFingerEvent *finger, int type )
+{
+	static SDL_FingerID down = -1;
+
+	if ( !( Key_GetCatcher( ) & KEYCATCH_UI ) )
+	{
+		if ( type == SDL_FINGERUP && finger->fingerId == down )
+		{
+			Com_QueueEvent( in_eventTime, SE_KEY, K_MOUSE1, qfalse, 0, NULL );
+			down = -1;
+		}
+		return;
+	}
+	if ( type != SDL_FINGERDOWN && finger->fingerId != down )
+		return;
+	if ( type != SDL_FINGERUP )
+	{
+		Com_QueueEvent( in_eventTime, SE_MOUSE, -SCREEN_WIDTH * 2, -SCREEN_HEIGHT * 2, 0, NULL );
+		Com_QueueEvent( in_eventTime, SE_MOUSE, (int)( finger->x * SCREEN_WIDTH ), (int)( finger->y * SCREEN_HEIGHT ),
+			0, NULL );
+	}
+	if ( type == SDL_FINGERDOWN && down == -1 )
+	{
+		down = finger->fingerId;
+		Com_QueueEvent( in_eventTime, SE_KEY, K_MOUSE1, qtrue, 0, NULL );
+	}
+	else if ( type == SDL_FINGERUP )
+	{
+		Com_QueueEvent( in_eventTime, SE_KEY, K_MOUSE1, qfalse, 0, NULL );
+		down = -1;
+	}
+}
+#endif
+
 static void IN_GamepadMove( void )
 {
 	int i;
@@ -750,10 +815,17 @@ static void IN_GamepadMove( void )
 		if (pressed != stick_state.buttons[i])
 		{
 #ifdef __SWITCH__
+			int label = IN_SwitchLabelButton( i );
+
 			if ( pressed )
-				menuKeys[i] = IN_SwitchMenuKey( i );
+				menuKeys[i] = IN_SwitchMenuKey( label );
 			if ( menuKeys[i] ) {
 				Com_QueueEvent(in_eventTime, SE_KEY, menuKeys[i], pressed, 0, NULL);
+				stick_state.buttons[i] = pressed;
+				continue;
+			}
+			if ( label != i ) {
+				Com_QueueEvent(in_eventTime, SE_KEY, K_PAD0_A + label, pressed, 0, NULL);
 				stick_state.buttons[i] = pressed;
 				continue;
 			}
@@ -1175,6 +1247,14 @@ static void IN_ProcessEvents( void )
 				}
 				break;
 
+#ifdef __SWITCH__
+			case SDL_FINGERDOWN:
+			case SDL_FINGERMOTION:
+			case SDL_FINGERUP:
+				IN_SwitchTouch( &e.tfinger, e.type );
+				break;
+#endif
+
 			case SDL_MOUSEMOTION:
 				if( mouseActive )
 				{
@@ -1357,6 +1437,9 @@ void IN_Init( void *windowData )
 	// (on the Switch this opens the system's keyboard: only when there is
 	// text to enter)
 	SDL_StartTextInput( );
+#else
+	// (the touchscreen is read as itself, IN_SwitchTouch: not also as a mouse)
+	SDL_SetHint( SDL_HINT_TOUCH_MOUSE_EVENTS, "0" );
 #endif
 
 	mouseAvailable = ( in_mouse->value != 0 );
