@@ -36,6 +36,25 @@ If you have questions concerning this license or the applicable additional terms
 // because games can change separately from the main system version, we need a
 // second version that must match between game and cgame
 
+// the AI's teams (entityState_t's teamNum, playerState_t's)
+typedef enum
+{
+	AITEAM_NAZI,
+	AITEAM_ALLIES,
+	AITEAM_MONSTER,
+	AITEAM_SPARE1,
+	AITEAM_SPARE2,
+	AITEAM_SPARE3,
+	AITEAM_SPARE4,
+	AITEAM_NEUTRAL
+} AITeam_t;
+
+#ifdef __SWITCH__
+// (the aim assist's enemies, the cgame's and the game's alike: another team
+// than the player's, not neutral)
+#define BG_AiHostile( team, playerTeam ) ( ( team ) != ( playerTeam ) && ( team ) != AITEAM_NEUTRAL )
+#endif
+
 #define	GAME_VERSION		BASEGAME "-1"
 
 #define DEFAULT_GRAVITY     800

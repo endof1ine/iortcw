@@ -846,6 +846,13 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 	case CG_ALLOC:
 		return VM_Alloc( args[1] );
 
+#ifdef __SWITCH__
+	case CG_SWITCH_SETAIMDRIFT:
+		cl.aimDrift[0] = VMF( 1 );
+		cl.aimDrift[1] = VMF( 2 );
+		return 0;
+#endif
+
 	default:
 		Com_Error( ERR_DROP, "Bad cgame system trap: %ld", (long int) args[0] );
 	}

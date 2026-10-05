@@ -219,7 +219,12 @@ typedef enum {
 	CG_GETMODELINFO,
 
 	// New in IORTCW
-	CG_ALLOC = 900
+	CG_ALLOC = 900,
+
+#ifdef __SWITCH__
+	// the aim assist's magnetism, degrees a second (cg_view.c's CG_AimAssist)
+	CG_SWITCH_SETAIMDRIFT = 950
+#endif
 
 } cgameImport_t;
 

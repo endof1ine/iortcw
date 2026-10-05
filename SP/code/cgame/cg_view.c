@@ -1466,15 +1466,13 @@ static int CG_AimTarget( vec3_t targetPoint ) {
 
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		centity_t *cent = &cg_entities[i];
-		int aiChar = cent->currentState.aiChar;
 		vec3_t point, dir;
 		float distance, cone, dot;
 		trace_t trace;
 
 		if ( !cent->currentValid || i == cg.snap->ps.clientNum || cent->currentState.eType != ET_PLAYER ||
-			( cent->currentState.eFlags & EF_NODRAW ) || aiChar == AICHAR_NONE ||
-			aiChar == AICHAR_AMERICAN || aiChar == AICHAR_PARTISAN || aiChar == AICHAR_CIVILIAN ||
-			( cent->currentState.eFlags & EF_DEAD ) ) {
+			( cent->currentState.eFlags & ( EF_NODRAW | EF_DEAD ) ) || cent->currentState.aiChar == AICHAR_NONE ||
+			!BG_AiHostile( cent->currentState.teamNum, cg.snap->ps.teamNum ) ) {
 			continue;
 		}
 		VectorCopy( cent->lerpOrigin, point );
@@ -1507,24 +1505,22 @@ static int CG_AimTarget( vec3_t targetPoint ) {
 =================
 CG_AimAssist
 
-Halo's aim assist, for the controller, from the enemy under the aim: friction,
+Halo's aim assist, for the controller, from the enemy near the aim: friction,
 the look slowed (the sensitivity the client gets: cg_aimFriction of it); and
-magnetism, the view turned with the enemy as it moves across the aim
-(cg_aimMagnetism of its drift, to the client as cl_aimDriftYaw and
-cl_aimDriftPitch, which it applies while the player moves or aims)
+magnetism, the view turned with the enemy as it moves across the player's
+sight (cg_aimMagnetism of its rate, to the client, which applies it while the
+player moves or aims). Off in cutscenes
 =================
 */
 static void CG_AimAssist( void ) {
 	static int lastTarget = -1, lastTime;
-	static vec2_t lastOffset;
-	static float publishedYaw, publishedPitch;
+	static vec2_t lastAngles;
 	float driftYaw = 0.0f, driftPitch = 0.0f;
 	vec3_t point, dir, angles;
 
-	cg.aimTarget = cg.snap ? CG_AimTarget( point ) : -1;
+	cg.aimTarget = cg.snap && !cg.cameraMode ? CG_AimTarget( point ) : -1;
 	cg.aimOnTarget = qfalse;
 	if ( cg.aimTarget >= 0 ) {
-		vec2_t offset;
 		float along, across;
 
 		// (on the body itself, not just near it: the red crosshair)
@@ -1536,29 +1532,25 @@ static void CG_AimAssist( void ) {
 		if ( cg_aimFriction.value > 0.0f && cg_aimFriction.value < 1.0f ) {
 			cg.zoomSensitivity *= cg_aimFriction.value;
 		}
+		// (the direction to the enemy from the eye, whichever way the player
+		// faces: its rate is the enemy's motion and the player's strafing,
+		// never the player's own turning)
 		vectoangles( dir, angles );
-		offset[0] = AngleSubtract( angles[YAW], cg.refdefViewAngles[YAW] );
-		offset[1] = AngleSubtract( angles[PITCH], cg.refdefViewAngles[PITCH] );
 		if ( cg.aimTarget == lastTarget && cg.time > lastTime && cg.time - lastTime < 200 ) {
 			float seconds = ( cg.time - lastTime ) / 1000.0f;
 
-			driftYaw = cg_aimMagnetism.value * AngleSubtract( offset[0], lastOffset[0] ) / seconds;
-			driftPitch = cg_aimMagnetism.value * AngleSubtract( offset[1], lastOffset[1] ) / seconds;
+			driftYaw = cg_aimMagnetism.value * AngleSubtract( angles[YAW], lastAngles[YAW] ) / seconds;
+			driftPitch = cg_aimMagnetism.value * AngleSubtract( angles[PITCH], lastAngles[PITCH] ) / seconds;
 			// (a target's own motion, not a flick: at most 90 degrees a second)
 			driftYaw = driftYaw < -90.0f ? -90.0f : driftYaw > 90.0f ? 90.0f : driftYaw;
 			driftPitch = driftPitch < -90.0f ? -90.0f : driftPitch > 90.0f ? 90.0f : driftPitch;
 		}
-		lastOffset[0] = offset[0];
-		lastOffset[1] = offset[1];
+		lastAngles[YAW] = angles[YAW];
+		lastAngles[PITCH] = angles[PITCH];
 		lastTime = cg.time;
 	}
 	lastTarget = cg.aimTarget;
-	if ( driftYaw != publishedYaw || driftPitch != publishedPitch ) {
-		trap_Cvar_Set( "cl_aimDriftYaw", va( "%.2f", driftYaw ) );
-		trap_Cvar_Set( "cl_aimDriftPitch", va( "%.2f", driftPitch ) );
-		publishedYaw = driftYaw;
-		publishedPitch = driftPitch;
-	}
+	trap_SetAimDrift( driftYaw, driftPitch );
 }
 #endif
 

@@ -1023,6 +1023,42 @@ qboolean Load_Menu( int handle ) {
 #ifdef __SWITCH__
 /*
 ==============
+UI_SwitchSaveName
+
+A new save's name: the map's and a number after its others, read from the
+save folder itself (not the menu's list, which may be the autosaves', or
+cut short), and checked unused, as savegame overwrites without asking
+==============
+*/
+static void UI_SwitchSaveName( char *name, int size ) {
+	static char list[32768];
+	char map[MAX_QPATH];
+	char *other;
+	int count, len, last = 0, i;
+	fileHandle_t f;
+
+	trap_Cvar_VariableStringBuffer( "mapname", map, sizeof( map ) );
+	if ( !map[0] ) {
+		Q_strncpyz( map, "save", sizeof( map ) );
+	}
+	len = strlen( map );
+	count = trap_FS_GetFileList( "save", "svg", list, sizeof( list ) );
+	for ( i = 0, other = list; i < count; i++, other += strlen( other ) + 1 ) {
+		if ( !Q_stricmpn( other, map, len ) && other[len] == '_' && atoi( other + len + 1 ) > last ) {
+			last = atoi( other + len + 1 );
+		}
+	}
+	do {
+		Com_sprintf( name, size, "%s_%02d", map, ++last );
+		if ( trap_FS_FOpenFile( va( "save/%s.svg", name ), &f, FS_READ ) < 0 || !f ) {
+			break;
+		}
+		trap_FS_FCloseFile( f );
+	} while ( 1 );
+}
+
+/*
+==============
 UI_SwitchMenus
 
 The Controls menus, main and in-game, replaced by the port's controller
@@ -4808,22 +4844,7 @@ static void UI_RunMenuScript( char **args ) {
 			// numbered after its others, escape1_01, escape1_02...; one picked
 			// from the list is overwritten, confirmed, below)
 			if ( !strlen( name ) ) {
-				char map[MAX_QPATH];
-				int last = 0;
-
-				trap_Cvar_VariableStringBuffer( "mapname", map, sizeof( map ) );
-				if ( !map[0] ) {
-					Q_strncpyz( map, "save", sizeof( map ) );
-				}
-				for ( i = 0; i < uiInfo.savegameCount; i++ ) {
-					const char *other = uiInfo.savegameList[i].savegameName;
-					int len = strlen( map );
-
-					if ( !Q_stricmpn( other, map, len ) && other[len] == '_' && atoi( other + len + 1 ) > last ) {
-						last = atoi( other + len + 1 );
-					}
-				}
-				Com_sprintf( name, sizeof( name ), "%s_%02d", map, last + 1 );
+				UI_SwitchSaveName( name, sizeof( name ) );
 				trap_Cmd_ExecuteText( EXEC_APPEND, va( "savegame %s\n", name ) );
 				Menus_CloseAll();
 			} else

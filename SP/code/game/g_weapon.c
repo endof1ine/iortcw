@@ -892,18 +892,25 @@ Bullet_Fire
 ==============
 Bullet_AimAssist
 
-Halo's bullet magnetism, for a controller: the player's shot goes to the
-middle of the visible enemy nearest the aim within g_aimAssistAngle degrees
-(not allies, nor civilians), its spread kept around that
+Halo's bullet magnetism, for a controller: a shot that would hit nothing it
+can hurt goes to the middle of the visible enemy nearest the aim within
+g_aimAssistAngle degrees, its spread kept around that. One aimed at someone,
+a head say, stays as it was
 ==============
 */
 static void Bullet_AimAssist( gentity_t *ent ) {
 	float best;
-	vec3_t bestDir, angles;
+	vec3_t bestDir, angles, end;
 	qboolean found = qfalse;
+	trace_t aimed;
 	int i;
 
 	if ( !g_aimAssist.integer || !ent->client || ent->aiCharacter || g_aimAssistAngle.value <= 0 ) {
+		return;
+	}
+	VectorMA( muzzleTrace, 8192, forward, end );
+	trap_Trace( &aimed, muzzleTrace, NULL, NULL, end, ent->s.number, MASK_SHOT );
+	if ( aimed.entityNum < ENTITYNUM_WORLD && g_entities[aimed.entityNum].takedamage ) {
 		return;
 	}
 	best = cos( DEG2RAD( g_aimAssistAngle.value ) );

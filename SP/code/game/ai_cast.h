@@ -106,17 +106,7 @@ typedef enum
 	PREDICTSTOP_HITCLIENT
 } predictStop_t;
 //
-typedef enum
-{
-	AITEAM_NAZI,
-	AITEAM_ALLIES,
-	AITEAM_MONSTER,
-	AITEAM_SPARE1,
-	AITEAM_SPARE2,
-	AITEAM_SPARE3,
-	AITEAM_SPARE4,
-	AITEAM_NEUTRAL
-} AITeam_t;
+// (AITeam_t: bg_public.h, the cgame uses it too)
 //
 typedef enum
 {

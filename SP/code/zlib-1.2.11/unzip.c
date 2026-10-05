@@ -640,8 +640,8 @@ local unzFile unzOpenInternal (const void *path,
     /* (zip64's locator, when there is one, sits just before the end record:
        looked for there, not by reading the last 64 KB backwards, slow on the
        SD card for each sound's own handle on its pak) */
+    ZPOS64_T end = unz64local_SearchCentralDir(&us.z_filefunc,us.filestream);
     {
-        ZPOS64_T end = unz64local_SearchCentralDir(&us.z_filefunc,us.filestream);
         uLong signature;
 
         central_pos = 0;
@@ -715,7 +715,11 @@ local unzFile unzOpenInternal (const void *path,
     }
     else
     {
+#ifdef __SWITCH__
+        central_pos = end;  /* (searched for above) */
+#else
         central_pos = unz64local_SearchCentralDir(&us.z_filefunc,us.filestream);
+#endif
         if (central_pos==0)
             err=UNZ_ERRNO;
 

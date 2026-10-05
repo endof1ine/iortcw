@@ -2416,6 +2416,9 @@ qboolean    trap_GetUserCmd( int cmdNumber, usercmd_t *ucmd );
 
 // used for the weapon/holdable select and zoom
 void        trap_SetUserCmdValue( int stateValue, int holdValue, float sensitivityScale, int cld );     // NERVE - SMF - added cld
+#ifdef __SWITCH__
+void        trap_SetAimDrift( float yaw, float pitch );
+#endif
 
 // aids for VM testing
 void        testPrintInt( char *string, int i );

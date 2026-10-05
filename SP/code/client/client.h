@@ -134,6 +134,9 @@ typedef struct {
 	int cgameUserCmdValue;              // current weapon to add to usercmd_t
 	int cgameUserHoldableValue;         // current holdable item to add to usercmd_t	//----(SA)	added
 	float cgameSensitivity;
+#ifdef __SWITCH__
+	float aimDrift[2];                  // the cgame's magnetism, yaw and pitch, degrees a second
+#endif
 	int cgameCld;                       // NERVE - SMF
 
 	// cmds[cmdNumber] is the predicted command, [cmdNumber-1] is the last

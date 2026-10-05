@@ -1988,7 +1988,9 @@ Key_SwitchDefaultBinds
 
 The Switch's controller: the pad's buttons that no config binds (default.cfg
 binds none; wolfconfig.cfg has the controls menu's) get these, after the
-configs. + is the menu, the keyboard's escape (sdl_input.c).
+configs, once (in_padBinds): one the player unbinds stays so, unless no pad
+button is bound at all, a config wiped. + is the menu, the keyboard's escape
+(sdl_input.c).
 ===================
 */
 void Key_SwitchDefaultBinds( void )
@@ -2019,8 +2021,20 @@ void Key_SwitchDefaultBinds( void )
 		{ "PAD0_DPAD_DOWN", "+useitem" },
 		{ "PAD0_BACK", "notebook" },
 	};
+	cvar_t *applied = Cvar_Get( "in_padBinds", "0", CVAR_ARCHIVE );
+	qboolean anyBound = qfalse;
 	int i;
 
+	for ( i = 0; i < ARRAY_LEN( binds ); i++ )
+	{
+		int key = Key_StringToKeynum( (char *)binds[i][0] );
+		const char *binding = key >= 0 ? Key_GetBinding( key ) : NULL;
+
+		if ( binding && binding[0] )
+			anyBound = qtrue;
+	}
+	if ( applied->integer >= 1 && anyBound )
+		return;
 	for ( i = 0; i < ARRAY_LEN( binds ); i++ )
 	{
 		int key = Key_StringToKeynum( (char *)binds[i][0] );
@@ -2029,6 +2043,7 @@ void Key_SwitchDefaultBinds( void )
 		if ( key >= 0 && ( !binding || !binding[0] ) )
 			Key_SetBinding( key, binds[i][1] );
 	}
+	Cvar_Set( "in_padBinds", "1" );
 }
 #endif
 

@@ -1663,14 +1663,10 @@ void CIN_DrawCinematic( int handle ) {
 	buf = cinTable[handle].buf;
 	SCR_AdjustFrom640( &x, &y, &w, &h );
 
-	// with the menus' fixed aspect (cg_fixedAspect, on the Switch
-	// ui_fixedAspect) on a wider screen: the movie at 4:3 too, centred, black
-	// at its sides
 #ifdef __SWITCH__
+	// with the menus' fixed aspect (ui_fixedAspect) on a wider screen: the
+	// movie at 4:3 too, centred, black at its sides
 	if ( Cvar_VariableIntegerValue( "ui_fixedAspect" ) &&
-#else
-	if ( Cvar_VariableIntegerValue( "cg_fixedAspect" ) &&
-#endif
 		cls.glconfig.vidWidth * 480 > cls.glconfig.vidHeight * 640 ) {
 		float scale = cls.glconfig.vidHeight / 480.0f;
 		float bias = 0.5f * ( cls.glconfig.vidWidth - 640.0f * scale );
@@ -1684,6 +1680,7 @@ void CIN_DrawCinematic( int handle ) {
 			re.SetColor( NULL );
 		}
 	}
+#endif
 
 	if ( cinTable[handle].letterBox ) {
 		float barheight;
@@ -1695,9 +1692,15 @@ void CIN_DrawCinematic( int handle ) {
 		re.SetColor( &colorBlack[0] );
 //		re.DrawStretchPic( 0, 0, SCREEN_WIDTH, LETTERBOX_OFFSET, 0, 0, 0, 0, cls.whiteShader );
 //		re.DrawStretchPic( 0, SCREEN_HEIGHT-LETTERBOX_OFFSET, SCREEN_WIDTH, LETTERBOX_OFFSET, 0, 0, 0, 0, cls.whiteShader );
-		//----(SA)	adjust for 640x480 (the whole width: the movie may be narrower)
+#ifdef __SWITCH__
+		// (the whole width: the movie may be narrower, pillarboxed above)
 		re.DrawStretchPic( 0, 0, cls.glconfig.vidWidth, barheight, 0, 0, 0, 0, cls.whiteShader );
 		re.DrawStretchPic( 0, vh - barheight - 1, cls.glconfig.vidWidth, barheight + 1, 0, 0, 0, 0, cls.whiteShader );
+#else
+		//----(SA)	adjust for 640x480
+		re.DrawStretchPic( 0, 0, w, barheight, 0, 0, 0, 0, cls.whiteShader );
+		re.DrawStretchPic( 0, vh - barheight - 1, w, barheight + 1, 0, 0, 0, 0, cls.whiteShader );
+#endif
 	}
 
 	if ( cinTable[handle].dirty && ( cinTable[handle].CIN_WIDTH != cinTable[handle].drawX || cinTable[handle].CIN_HEIGHT != cinTable[handle].drawY ) ) {

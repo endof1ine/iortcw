@@ -394,6 +394,12 @@ void        trap_SetUserCmdValue( int stateValue, int holdableValue, float sensi
 	syscall( CG_SETUSERCMDVALUE, stateValue, holdableValue, PASSFLOAT( sensitivityScale ), cld );
 }
 
+#ifdef __SWITCH__
+void trap_SetAimDrift( float yaw, float pitch ) {
+	syscall( CG_SWITCH_SETAIMDRIFT, PASSFLOAT( yaw ), PASSFLOAT( pitch ) );
+}
+#endif
+
 void        testPrintInt( char *string, int i ) {
 	syscall( CG_TESTPRINTINT, string, i );
 }
