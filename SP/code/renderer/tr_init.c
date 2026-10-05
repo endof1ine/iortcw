@@ -1237,6 +1237,11 @@ void R_Register( void ) {
 #ifdef USE_OPENGLES
 	r_mode = ri.Cvar_Get( "r_mode", "-2", CVAR_ARCHIVE | CVAR_LATCH );
 	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
+#ifdef __SWITCH__
+	// (the screen's own resolution, whatever a config or safe mode says)
+	ri.Cvar_Set( "r_mode", "-2" );
+	ri.Cvar_Set( "r_fullscreen", "1" );
+#endif
 #else
 	r_mode = ri.Cvar_Get( "r_mode", "3", CVAR_ARCHIVE | CVAR_LATCH );
 	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "0", CVAR_ARCHIVE | CVAR_LATCH );

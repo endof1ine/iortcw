@@ -68,6 +68,10 @@ ifeq ($(PLATFORM),switch)
   USE_MUMBLE=0
   BUILD_GAME_SO=0
   BUILD_GAME_QVM=0
+  # (devkitPro's libjpeg-turbo, headers and library both)
+  USE_INTERNAL_JPEG=0
+  JPEG_CFLAGS=
+  JPEG_LIBS=-ljpeg
   # (the game's folder on the SD card, wherever the program is started from)
   DEFAULT_BASEDIR=/switch/iortcw
 endif

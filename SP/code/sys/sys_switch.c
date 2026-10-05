@@ -402,7 +402,8 @@ void Sys_ErrorDialog( const char *error )
 ==============
 Sys_Dialog
 
-No dialogs: the answer that lets the game go on
+No dialogs: the answer that leaves things as they are (no to "start with
+safe video settings?" after a crash, which would draw at 640x480)
 ==============
 */
 dialogResult_t Sys_Dialog( dialogType_t type, const char *message, const char *title )
@@ -410,7 +411,7 @@ dialogResult_t Sys_Dialog( dialogType_t type, const char *message, const char *t
 	Com_Printf( "%s: %s\n", title, message );
 	switch ( type )
 	{
-		case DT_YES_NO:    return DR_YES;
+		case DT_YES_NO:    return DR_NO;
 		case DT_OK_CANCEL: return DR_OK;
 		default:           return DR_OK;
 	}
@@ -432,12 +433,13 @@ void Sys_SetFloatEnv( void )
 
 void Sys_PlatformInit( void )
 {
-	// (started by the Homebrew Menu's netloader: the console's output to it)
+	// (internet and LAN play's sockets; then, started by the Homebrew Menu's
+	// netloader, the console's output to it, which needs them)
+	socketInitializeDefault();
 	nxlinkStdio();
+	setvbuf( stdout, NULL, _IONBF, 0 );
 	Sys_SetFloatEnv();
 	stdinIsATTY = qfalse;
-	// (internet and LAN play's sockets)
-	socketInitializeDefault();
 }
 
 void Sys_PlatformExit( void )
