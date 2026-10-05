@@ -4770,6 +4770,31 @@ static void UI_RunMenuScript( char **args ) {
 			name[0] = '\0';
 			Q_strncpyz( name, UI_Cvar_VariableString( "ui_savegame" ), MAX_NAME_LENGTH );
 
+#ifdef __SWITCH__
+			// (no name typed on a console: a new save named for the map and
+			// numbered after its others, escape1_01, escape1_02...; one picked
+			// from the list is overwritten, confirmed, below)
+			if ( !strlen( name ) ) {
+				char map[MAX_QPATH];
+				int last = 0;
+
+				trap_Cvar_VariableStringBuffer( "mapname", map, sizeof( map ) );
+				if ( !map[0] ) {
+					Q_strncpyz( map, "save", sizeof( map ) );
+				}
+				for ( i = 0; i < uiInfo.savegameCount; i++ ) {
+					const char *other = uiInfo.savegameList[i].savegameName;
+					int len = strlen( map );
+
+					if ( !Q_stricmpn( other, map, len ) && other[len] == '_' && atoi( other + len + 1 ) > last ) {
+						last = atoi( other + len + 1 );
+					}
+				}
+				Com_sprintf( name, sizeof( name ), "%s_%02d", map, last + 1 );
+				trap_Cmd_ExecuteText( EXEC_APPEND, va( "savegame %s\n", name ) );
+				Menus_CloseAll();
+			} else
+#endif
 			if ( !strlen( name ) ) {
 				Menus_OpenByName( "save_name_popmenu" );
 			} else {
