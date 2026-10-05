@@ -1293,6 +1293,9 @@ memory on the hunk from cgame, ui, and renderer
 =====================
 */
 void CL_MapLoading( void ) {
+#ifdef __SWITCH__
+	Sys_SwitchCpuBoost( qtrue );
+#endif
 	if ( com_dedicated->integer ) {
 		clc.state = CA_DISCONNECTED;
 		Key_SetCatcher( KEYCATCH_CONSOLE );
@@ -2922,6 +2925,13 @@ void CL_Frame( int msec ) {
 	if ( !com_cl_running->integer ) {
 		return;
 	}
+
+#ifdef __SWITCH__
+	// (loading done: in the menus, or the level running)
+	if ( clc.state == CA_DISCONNECTED || clc.state == CA_ACTIVE ) {
+		Sys_SwitchCpuBoost( qfalse );
+	}
+#endif
 
 #ifdef USE_CURL
 	if(clc.downloadCURLM) {

@@ -440,6 +440,7 @@ void Sys_PlatformInit( void )
 	setvbuf( stdout, NULL, _IONBF, 0 );
 	// (the port's own game files inside the program, files.c's romfs:)
 	romfsInit();
+	Sys_SwitchCpuBoost( qtrue );
 	Sys_SetFloatEnv();
 	stdinIsATTY = qfalse;
 }
@@ -503,6 +504,32 @@ mode (the screen's 720)
 int Sys_SwitchDocked( void )
 {
 	return appletGetOperationMode() == AppletOperationMode_Console;
+}
+
+/*
+==============
+Sys_SwitchCpuBoost
+
+The CPU at its fastest (1785 MHz; the GPU slowed meanwhile) while loading:
+at start-up until the main menu, and from a level's loading (CL_MapLoading)
+until it runs (CL_Frame). Each load's time logged
+==============
+*/
+void Sys_SwitchCpuBoost( qboolean on )
+{
+	static qboolean boosted;
+	static int since;
+
+	if ( on == boosted ) {
+		return;
+	}
+	appletSetCpuBoostMode( on ? ApmCpuBoostMode_FastLoad : ApmCpuBoostMode_Normal );
+	boosted = on;
+	if ( on ) {
+		since = Sys_Milliseconds( );
+	} else {
+		Com_Printf( "loaded in %d ms (CPU boosted)\n", Sys_Milliseconds( ) - since );
+	}
 }
 
 /*

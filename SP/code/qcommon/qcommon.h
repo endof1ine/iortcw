@@ -1186,6 +1186,9 @@ void	Sys_Sleep(int msec);
 qboolean Sys_LowPhysicalMemory( void );
 
 void Sys_SetEnv(const char *name, const char *value);
+#ifdef __SWITCH__
+void Sys_SwitchCpuBoost( qboolean on );
+#endif
 
 typedef enum
 {
