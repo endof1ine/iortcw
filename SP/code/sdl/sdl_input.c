@@ -753,41 +753,72 @@ static void IN_SwitchMenuCursor( void )
 =================
 IN_SwitchTouch
 
-The touchscreen in the menus: a finger puts the cursor where it is (the menus'
-640x480, stretched over the screen: to the corner, then there, as the menus
-take only movement) and presses the mouse's button until it lifts
+The touchscreen in the menus: a finger puts the cursor where it is and
+presses the mouse's button until it lifts. The menus take only movement (in
+their 640x480, stretched over the screen), and the event queue adds up mouse
+movements that follow each other: the cursor goes to the corner now, and to
+the finger (then the button) at the next frame, IN_SwitchTouchFrame
 =================
 */
+static struct
+{
+	SDL_FingerID down;
+	qboolean move, press, release;
+	int x, y;
+} switchTouch = { -1 };
+
 static void IN_SwitchTouch( const SDL_TouchFingerEvent *finger, int type )
 {
-	static SDL_FingerID down = -1;
-
 	if ( !( Key_GetCatcher( ) & KEYCATCH_UI ) )
 	{
-		if ( type == SDL_FINGERUP && finger->fingerId == down )
+		if ( type == SDL_FINGERUP && finger->fingerId == switchTouch.down )
 		{
 			Com_QueueEvent( in_eventTime, SE_KEY, K_MOUSE1, qfalse, 0, NULL );
-			down = -1;
+			switchTouch.down = -1;
 		}
 		return;
 	}
-	if ( type != SDL_FINGERDOWN && finger->fingerId != down )
+	if ( type == SDL_FINGERDOWN && switchTouch.down == -1 )
+	{
+		switchTouch.down = finger->fingerId;
+		switchTouch.press = qtrue;
+	}
+	else if ( finger->fingerId != switchTouch.down )
+	{
 		return;
-	if ( type != SDL_FINGERUP )
-	{
-		Com_QueueEvent( in_eventTime, SE_MOUSE, -SCREEN_WIDTH * 2, -SCREEN_HEIGHT * 2, 0, NULL );
-		Com_QueueEvent( in_eventTime, SE_MOUSE, (int)( finger->x * SCREEN_WIDTH ), (int)( finger->y * SCREEN_HEIGHT ),
-			0, NULL );
 	}
-	if ( type == SDL_FINGERDOWN && down == -1 )
+	if ( type == SDL_FINGERUP )
 	{
-		down = finger->fingerId;
+		switchTouch.release = qtrue;
+		switchTouch.down = -1;
+		return;
+	}
+	Com_QueueEvent( in_eventTime, SE_MOUSE, -SCREEN_WIDTH * 2, -SCREEN_HEIGHT * 2, 0, NULL );
+	switchTouch.move = qtrue;
+	switchTouch.x = (int)( finger->x * SCREEN_WIDTH );
+	switchTouch.y = (int)( finger->y * SCREEN_HEIGHT );
+}
+
+/* the rest of a touch, the frame after it: the cursor to the finger, then
+the button */
+static void IN_SwitchTouchFrame( void )
+{
+	if ( switchTouch.move )
+	{
+		Com_QueueEvent( in_eventTime, SE_MOUSE, switchTouch.x, switchTouch.y, 0, NULL );
+		switchTouch.move = qfalse;
+		return;
+	}
+	if ( switchTouch.press )
+	{
 		Com_QueueEvent( in_eventTime, SE_KEY, K_MOUSE1, qtrue, 0, NULL );
+		switchTouch.press = qfalse;
+		return;
 	}
-	else if ( type == SDL_FINGERUP )
+	if ( switchTouch.release )
 	{
 		Com_QueueEvent( in_eventTime, SE_KEY, K_MOUSE1, qfalse, 0, NULL );
-		down = -1;
+		switchTouch.release = qfalse;
 	}
 }
 #endif
@@ -1387,6 +1418,9 @@ void IN_Frame( void )
 	else
 		IN_ActivateMouse( cls.glconfig.isFullscreen );
 
+#ifdef __SWITCH__
+	IN_SwitchTouchFrame( );
+#endif
 	IN_ProcessEvents( );
 
 	// Set event time for next frame to earliest possible time an event could happen

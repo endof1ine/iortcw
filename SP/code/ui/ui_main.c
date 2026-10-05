@@ -6940,6 +6940,17 @@ void _UI_KeyEvent( int key, qboolean down ) {
 	if ( Menu_Count() > 0 ) {
 		menuDef_t *menu = Menu_GetFocused();
 		if ( menu ) {
+#ifdef __SWITCH__
+			// (the briefing after a level loads: its arrow, bottom right,
+			// shows only with the cursor on it; the controller's A starts the
+			// level anywhere)
+			if ( key == K_ENTER && down && menu->window.name && !Q_stricmp( menu->window.name, "pregame" ) ) {
+				char *script = "playerstart";
+
+				UI_RunMenuScript( &script );
+				return;
+			}
+#endif
 			if ( key == K_ESCAPE && down && !Menus_AnyFullScreenVisible() ) {
 				Menus_CloseAll();
 			} else {
