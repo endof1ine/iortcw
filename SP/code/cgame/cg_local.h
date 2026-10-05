@@ -808,8 +808,7 @@ typedef struct {
 	int zoomTime;
 	float zoomSensitivity;
 #ifdef __SWITCH__
-	int aimTarget;              // the enemy near the aim (CG_AimAssist), -1 none: friction, magnetism
-	qboolean aimOnTarget;       // the aim on that enemy's body: the red crosshair
+	qboolean aimOnTarget;       // the aim on an enemy's body (CG_AimAssist): the red crosshair
 #endif
 	float zoomval;
 

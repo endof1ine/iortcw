@@ -1188,6 +1188,11 @@ qboolean Sys_LowPhysicalMemory( void );
 void Sys_SetEnv(const char *name, const char *value);
 #ifdef __SWITCH__
 void Sys_SwitchCpuBoost( qboolean on );
+qboolean Key_SwitchPadBound( void );
+int Sys_SwitchDocked( void );
+void Sys_SwitchRumble( float low, float high );
+void *Sys_SwitchLoadGameModule( const char *path, vmMainProc *entryPoint,
+	intptr_t ( *systemcalls )( intptr_t, ... ) );
 #endif
 
 typedef enum

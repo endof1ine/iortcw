@@ -464,23 +464,6 @@ qboolean AICast_SameTeam( cast_state_t *cs, int enemynum ) {
 
 }
 
-#ifdef __SWITCH__
-/*
-==================
-AICast_HostileTo
-
-The AI entitynum, of a team hostile to other's (the bullet magnetism's
-targets, g_weapon.c; the cgame's aim assist judges alike, BG_AiHostile)
-==================
-*/
-qboolean AICast_HostileTo( int entitynum, int other ) {
-	if ( !AICast_GetCastState( entitynum ) ) {
-		return qfalse;
-	}
-	return BG_AiHostile( g_entities[entitynum].aiTeam, g_entities[other].aiTeam );
-}
-#endif
-
 /*
 ==================
 AICast_WeaponRange

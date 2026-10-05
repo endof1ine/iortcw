@@ -1517,10 +1517,10 @@ static void CG_AimAssist( void ) {
 	static vec2_t lastAngles;
 	float driftYaw = 0.0f, driftPitch = 0.0f;
 	vec3_t point, dir, angles;
+	int target = cg.snap && !cg.cameraMode ? CG_AimTarget( point ) : -1;
 
-	cg.aimTarget = cg.snap && !cg.cameraMode ? CG_AimTarget( point ) : -1;
 	cg.aimOnTarget = qfalse;
-	if ( cg.aimTarget >= 0 ) {
+	if ( target >= 0 ) {
 		float along, across;
 
 		// (on the body itself, not just near it: the red crosshair)
@@ -1536,20 +1536,20 @@ static void CG_AimAssist( void ) {
 		// faces: its rate is the enemy's motion and the player's strafing,
 		// never the player's own turning)
 		vectoangles( dir, angles );
-		if ( cg.aimTarget == lastTarget && cg.time > lastTime && cg.time - lastTime < 200 ) {
+		if ( target == lastTarget && cg.time > lastTime && cg.time - lastTime < 200 ) {
 			float seconds = ( cg.time - lastTime ) / 1000.0f;
 
 			driftYaw = cg_aimMagnetism.value * AngleSubtract( angles[YAW], lastAngles[YAW] ) / seconds;
 			driftPitch = cg_aimMagnetism.value * AngleSubtract( angles[PITCH], lastAngles[PITCH] ) / seconds;
 			// (a target's own motion, not a flick: at most 90 degrees a second)
-			driftYaw = driftYaw < -90.0f ? -90.0f : driftYaw > 90.0f ? 90.0f : driftYaw;
-			driftPitch = driftPitch < -90.0f ? -90.0f : driftPitch > 90.0f ? 90.0f : driftPitch;
+			driftYaw = Com_Clamp( -90.0f, 90.0f, driftYaw );
+			driftPitch = Com_Clamp( -90.0f, 90.0f, driftPitch );
 		}
 		lastAngles[YAW] = angles[YAW];
 		lastAngles[PITCH] = angles[PITCH];
 		lastTime = cg.time;
 	}
-	lastTarget = cg.aimTarget;
+	lastTarget = target;
 	trap_SetAimDrift( driftYaw, driftPitch );
 }
 #endif

@@ -900,30 +900,23 @@ a head say, stays as it was
 */
 static void Bullet_AimAssist( gentity_t *ent ) {
 	float best;
-	vec3_t bestDir, angles, end;
-	qboolean found = qfalse;
-	trace_t aimed;
+	vec3_t bestDir, angles;
+	qboolean found = qfalse, aimChecked = qfalse;
 	int i;
 
 	if ( !g_aimAssist.integer || !ent->client || ent->aiCharacter || g_aimAssistAngle.value <= 0 ) {
 		return;
 	}
-	VectorMA( muzzleTrace, 8192, forward, end );
-	trap_Trace( &aimed, muzzleTrace, NULL, NULL, end, ent->s.number, MASK_SHOT );
-	if ( aimed.entityNum < ENTITYNUM_WORLD && g_entities[aimed.entityNum].takedamage ) {
-		return;
-	}
 	best = cos( DEG2RAD( g_aimAssistAngle.value ) );
-	for ( i = 0; i < level.num_entities; i++ ) {
+	// (the AI are clients; their teams judged as the cgame's, BG_AiHostile)
+	for ( i = 0; i < level.maxclients; i++ ) {
 		gentity_t *target = &g_entities[i];
 		vec3_t point, dir;
 		float dot;
 		trace_t tr;
 
-		if ( !target->inuse || !target->aiCharacter || target->health <= 0 || target == ent ) {
-			continue;
-		}
-		if ( !AICast_HostileTo( target->s.number, ent->s.number ) ) {
+		if ( !target->inuse || !target->aiCharacter || target->health <= 0 || target == ent ||
+			!BG_AiHostile( target->aiTeam, ent->aiTeam ) ) {
 			continue;
 		}
 		VectorAdd( target->r.absmin, target->r.absmax, point );
@@ -933,6 +926,17 @@ static void Bullet_AimAssist( gentity_t *ent ) {
 		dot = DotProduct( dir, forward );
 		if ( dot <= best ) {
 			continue;
+		}
+		if ( !aimChecked ) {
+			// (an enemy near the aim: a shot already on someone stays)
+			vec3_t end;
+
+			VectorMA( muzzleTrace, 8192, forward, end );
+			trap_Trace( &tr, muzzleTrace, NULL, NULL, end, ent->s.number, MASK_SHOT );
+			if ( tr.entityNum < ENTITYNUM_WORLD && g_entities[tr.entityNum].takedamage ) {
+				return;
+			}
+			aimChecked = qtrue;
 		}
 		trap_Trace( &tr, muzzleTrace, NULL, NULL, point, ent->s.number, MASK_SHOT );
 		if ( tr.entityNum != target->s.number ) {

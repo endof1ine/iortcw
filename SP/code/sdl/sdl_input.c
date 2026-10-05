@@ -49,6 +49,9 @@ static cvar_t *in_mouse             = NULL;
 static cvar_t *in_nograb;
 
 static cvar_t *in_joystick          = NULL;
+#ifdef __SWITCH__
+static cvar_t *in_rumble;
+#endif
 static cvar_t *in_joystickThreshold = NULL;
 static cvar_t *in_joystickNo        = NULL;
 static cvar_t *in_joystickUseAnalog = NULL;
@@ -650,22 +653,7 @@ static qboolean KeyToAxisAndSign(int keynum, int *outAxis, int *outSign)
 	return *outSign != 0;
 }
 
-/*
-===============
-IN_GamepadMove
-===============
-*/
 #ifdef __SWITCH__
-/*
-=================
-IN_SwitchMenuKey
-
-The Switch's controller is its only input, and the menus and the console
-take keys, not pad buttons: there A is enter, B escape and the d-pad the
-arrows; + is escape everywhere (the menu, as the keyboard's). 0: the pad's own
-key.
-=================
-*/
 /*
 =================
 IN_SwitchLabelButton
@@ -687,6 +675,16 @@ static int IN_SwitchLabelButton( int button )
 	}
 }
 
+/*
+=================
+IN_SwitchMenuKey
+
+The Switch's controller is its only input, and the menus and the console
+take keys, not pad buttons: there A is enter, B escape and the d-pad the
+arrows; + is escape everywhere (the menu, as the keyboard's). 0: the pad's own
+key.
+=================
+*/
 static int IN_SwitchMenuKey( int button )
 {
 	if ( button == SDL_CONTROLLER_BUTTON_START )
@@ -746,9 +744,7 @@ static void IN_SwitchMenuCursor( void )
 		restY -= (int)restY;
 	}
 }
-#endif
 
-#ifdef __SWITCH__
 /*
 =================
 IN_SwitchTouch
@@ -831,7 +827,6 @@ for the cgame's firing, damage and explosions, scaled by in_rumble (0 off).
 One still playing keeps its stronger motors and its end
 =================
 */
-void Sys_SwitchRumble( float low, float high );
 static struct {
 	float low, high;
 	int end;
@@ -839,15 +834,14 @@ static struct {
 
 static void IN_SwitchRumble_f( void )
 {
-	cvar_t *rumble = Cvar_Get( "in_rumble", "1", CVAR_ARCHIVE );
 	int now = Sys_Milliseconds( );
 	float low, high;
 	int ms;
 
-	if ( Cmd_Argc( ) < 4 || rumble->value <= 0.0f )
+	if ( Cmd_Argc( ) < 4 || in_rumble->value <= 0.0f )
 		return;
-	low = atof( Cmd_Argv( 1 ) ) * rumble->value;
-	high = atof( Cmd_Argv( 2 ) ) * rumble->value;
+	low = atof( Cmd_Argv( 1 ) ) * in_rumble->value;
+	high = atof( Cmd_Argv( 2 ) ) * in_rumble->value;
 	ms = atoi( Cmd_Argv( 3 ) );
 	if ( ms <= 0 )
 		return;
@@ -856,8 +850,8 @@ static void IN_SwitchRumble_f( void )
 		high = MAX( high, switchRumble.high );
 		ms = MAX( ms, switchRumble.end - now );
 	}
-	switchRumble.low = low < 0.0f ? 0.0f : low > 1.0f ? 1.0f : low;
-	switchRumble.high = high < 0.0f ? 0.0f : high > 1.0f ? 1.0f : high;
+	switchRumble.low = Com_Clamp( 0.0f, 1.0f, low );
+	switchRumble.high = Com_Clamp( 0.0f, 1.0f, high );
 	switchRumble.end = now + ms;
 	Sys_SwitchRumble( switchRumble.low, switchRumble.high );
 }
@@ -878,6 +872,11 @@ static void IN_SwitchRumbleFrame( qboolean force )
 }
 #endif
 
+/*
+===============
+IN_GamepadMove
+===============
+*/
 static void IN_GamepadMove( void )
 {
 	int i;
@@ -1524,6 +1523,7 @@ void IN_Init( void *windowData )
 #ifdef __SWITCH__
 	// (the Switch's controllers are its only input)
 	in_joystick = Cvar_Get( "in_joystick", "1", CVAR_ARCHIVE|CVAR_LATCH );
+	in_rumble = Cvar_Get( "in_rumble", "1", CVAR_ARCHIVE );
 #else
 	in_joystick = Cvar_Get( "in_joystick", "0", CVAR_ARCHIVE|CVAR_LATCH );
 #endif

@@ -307,10 +307,16 @@ cvarTable_t cvarTable[] = {
 	{ &cg_zoomStepSnooper, "cg_zoomStepSnooper", "5", CVAR_ARCHIVE },
 	{ &cg_zoomStepFG, "cg_zoomStepFG", "10", CVAR_ARCHIVE },          //----(SA)	added
 	{ &cg_fov, "cg_fov", "90", CVAR_ARCHIVE },	// NOTE: there is already a dmflag (DF_FIXED_FOV) to allow server control of this cheat
+#ifdef __SWITCH__
+	// (a 16:9 screen: the HUD at its own shape, on the screen's edges; the
+	// menus, loading screens and movies stretch, the UI's ui_fixedAspect)
+	{ &cg_fixedAspect, "cg_fixedAspect", "1", CVAR_ARCHIVE | CVAR_LATCH },
+#else
 	{ &cg_fixedAspect, "cg_fixedAspect", "0", CVAR_ARCHIVE | CVAR_LATCH }, // Essentially the same as setting DF_FIXED_FOV for widescreen aspects
+#endif
 	{ &cg_fixedAspectFOV, "cg_fixedAspectFOV", "1", CVAR_ARCHIVE },
 #ifdef __SWITCH__
-	// (Halo's aim friction for the controller: cg_view.c's CG_AimFriction)
+	// (Halo's aim assist for the controller: cg_view.c's CG_AimAssist)
 	{ &cg_aimFriction, "cg_aimFriction", "0.45", CVAR_ARCHIVE },
 	{ &cg_aimFrictionRadius, "cg_aimFrictionRadius", "40", CVAR_ARCHIVE },
 	{ &cg_aimMagnetism, "cg_aimMagnetism", "0.6", CVAR_ARCHIVE },

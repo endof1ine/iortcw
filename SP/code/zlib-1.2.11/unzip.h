@@ -168,6 +168,9 @@ extern int ZEXPORT unzStringFileNameCompare OF ((const char* fileName1,
 
 
 extern unzFile ZEXPORT unzOpen OF((const char *path));
+#ifdef __SWITCH__
+extern unzFile ZEXPORT unzReOpen OF((const void *path, unzFile file));
+#endif
 extern unzFile ZEXPORT unzOpen64 OF((const void *path));
 /*
   Open a Zip file. path contain the full pathname (by example,

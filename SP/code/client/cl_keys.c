@@ -1984,66 +1984,22 @@ void Key_Unbindall_f( void ) {
 #ifdef __SWITCH__
 /*
 ===================
-Key_SwitchDefaultBinds
+Key_SwitchPadBound
 
-The Switch's controller: the pad's buttons that no config binds (default.cfg
-binds none; wolfconfig.cfg has the controls menu's) get these, after the
-configs, once (in_padBinds): one the player unbinds stays so, unless no pad
-button is bound at all, a config wiped. + is the menu, the keyboard's escape
-(sdl_input.c).
+qtrue when a pad button is bound: none is, the first start or a config from a
+PC, and common.c runs the port's switchpad.cfg (romfs)
 ===================
 */
-void Key_SwitchDefaultBinds( void )
+qboolean Key_SwitchPadBound( void )
 {
-	static const char *const binds[][2] =
-	{
-		{ "PAD0_LEFTSTICK_UP", "+forward" },
-		{ "PAD0_LEFTSTICK_DOWN", "+back" },
-		{ "PAD0_LEFTSTICK_LEFT", "+moveleft" },
-		{ "PAD0_LEFTSTICK_RIGHT", "+moveright" },
-		{ "PAD0_RIGHTSTICK_UP", "+lookup" },
-		{ "PAD0_RIGHTSTICK_DOWN", "+lookdown" },
-		{ "PAD0_RIGHTSTICK_LEFT", "+left" },
-		{ "PAD0_RIGHTSTICK_RIGHT", "+right" },
-		{ "PAD0_RIGHTTRIGGER", "+attack" },
-		{ "PAD0_LEFTTRIGGER", "weapalt" },
-		{ "PAD0_RIGHTSHOULDER", "weapnext" },
-		{ "PAD0_LEFTSHOULDER", "weapprev" },
-		{ "PAD0_A", "+moveup" },
-		{ "PAD0_B", "+movedown" },
-		{ "PAD0_X", "+reload" },
-		{ "PAD0_Y", "+activate" },
-		{ "PAD0_LEFTSTICK_CLICK", "togglesprint" },
-		{ "PAD0_RIGHTSTICK_CLICK", "+kick" },
-		{ "PAD0_DPAD_LEFT", "+leanleft" },
-		{ "PAD0_DPAD_RIGHT", "+leanright" },
-		{ "PAD0_DPAD_UP", "+zoom" },
-		{ "PAD0_DPAD_DOWN", "+useitem" },
-		{ "PAD0_BACK", "notebook" },
-	};
-	cvar_t *applied = Cvar_Get( "in_padBinds", "0", CVAR_ARCHIVE );
-	qboolean anyBound = qfalse;
-	int i;
+	int key;
 
-	for ( i = 0; i < ARRAY_LEN( binds ); i++ )
+	for ( key = K_PAD0_A; key <= K_PAD0_RIGHTTRIGGER; key++ )
 	{
-		int key = Key_StringToKeynum( (char *)binds[i][0] );
-		const char *binding = key >= 0 ? Key_GetBinding( key ) : NULL;
-
-		if ( binding && binding[0] )
-			anyBound = qtrue;
+		if ( keys[key].binding && keys[key].binding[0] )
+			return qtrue;
 	}
-	if ( applied->integer >= 1 && anyBound )
-		return;
-	for ( i = 0; i < ARRAY_LEN( binds ); i++ )
-	{
-		int key = Key_StringToKeynum( (char *)binds[i][0] );
-		const char *binding = key >= 0 ? Key_GetBinding( key ) : NULL;
-
-		if ( key >= 0 && ( !binding || !binding[0] ) )
-			Key_SetBinding( key, binds[i][1] );
-	}
-	Cvar_Set( "in_padBinds", "1" );
+	return qfalse;
 }
 #endif
 
@@ -2312,8 +2268,9 @@ void CL_KeyDownEvent( int key, unsigned time )
 	}
 
 #ifdef __SWITCH__
-	// (the controller's face buttons, - and + skip movies and cutscenes as
-	// Enter does; not the triggers, held while firing as one starts)
+	// (the controller's face buttons and - skip movies and cutscenes as
+	// Enter does, + already being Escape (sdl_input.c); not the triggers,
+	// held while firing as one starts)
 	if ( key >= K_PAD0_A && key <= K_PAD0_START && !( Key_GetCatcher( ) & ( KEYCATCH_UI | KEYCATCH_CONSOLE ) ) &&
 		( cl.cameraMode || clc.state == CA_CINEMATIC ) ) {
 		key = K_ENTER;
@@ -2363,13 +2320,6 @@ void CL_KeyDownEvent( int key, unsigned time )
 //----(SA)	get the active menu if in ui mode
 	if ( Key_GetCatcher( ) & KEYCATCH_UI ) {
 		activeMenu = VM_Call( uivm, UI_GET_ACTIVE_MENU );
-#ifdef __SWITCH__
-		// (the briefing after a level loads: any button or a touch starts the
-		// level, as the UI's Enter, ui_main.c)
-		if ( activeMenu == UIMENU_PREGAME ) {
-			key = K_ENTER;
-		}
-#endif
 	}
 
 	// escape is always handled special
@@ -2416,13 +2366,13 @@ void CL_KeyDownEvent( int key, unsigned time )
 			// any key gets out of clipboard
 			key = K_ESCAPE;
 		} else if ( activeMenu == UIMENU_PREGAME ) {
-#ifdef __SWITCH__
-			if ( key != K_ENTER ) {
-#else
+#ifndef __SWITCH__
 			if ( key != K_MOUSE1 ) {
-#endif
 				return; // eat all keys except mouse click
 			}
+#endif
+			// (the Switch's: any button or a touch starts the level, the UI's
+			// _UI_KeyEvent)
 		} else {
 
 			// when in the notebook, check for the key bound to "notebook" and allow that as an escape key

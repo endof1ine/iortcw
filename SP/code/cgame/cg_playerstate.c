@@ -129,12 +129,9 @@ void CG_DamageFeedback( int yawByte, int pitchByte, int damage ) {
 #ifdef __SWITCH__
 	// (the controller shakes with the hit, by how hard)
 	{
-		float strength = damage / 40.0f;
+		float strength = MIN( damage / 40.0f, 1.0f );
 
-		if ( strength > 1.0f ) {
-			strength = 1.0f;
-		}
-		CG_Rumble( 0.8f * strength, 0.6f * strength, 150 + 6 * ( damage < 40 ? damage : 40 ) );
+		CG_Rumble( 0.8f * strength, 0.6f * strength, 150 + 240 * strength );
 	}
 #endif
 

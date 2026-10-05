@@ -1935,10 +1935,6 @@ For controlling environment variables
 ==================
 */
 
-#ifdef __SWITCH__
-void Key_SwitchDefaultBinds( void );
-#endif
-
 void Com_ExecuteCfg(void)
 {
 	Cbuf_ExecuteText(EXEC_NOW, "exec default.cfg\n");
@@ -1958,15 +1954,9 @@ void Com_ExecuteCfg(void)
 		Cbuf_Execute();
 	}
 #ifdef __SWITCH__
-	Key_SwitchDefaultBinds( );
-	// (a 16:9 screen: the HUD at its own shape, on the screen's edges, unless
-	// a config says otherwise; the module's own default leaves a value that
-	// is there. The menus, loading screens and movies stretch: ui_fixedAspect)
-	Cvar_Get( "cg_fixedAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	// (full texture detail: picmip 1, half of it, was for the graphics cards
-	// of 2001; the menus' texture quality changes it)
-	Cvar_Get( "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	Cvar_Get( "r_picmip2", "0", CVAR_ARCHIVE | CVAR_LATCH );
+	if ( !Key_SwitchPadBound( ) ) {
+		Cbuf_ExecuteText( EXEC_NOW, "exec switchpad.cfg\n" );
+	}
 #endif
 }
 
@@ -2704,6 +2694,44 @@ int Com_TimeVal(int minMsec)
 	return timeVal;
 }
 
+#ifdef __SWITCH__
+/*
+=================
+Com_SwitchSpeeds
+
+com_speeds 2: the frame times summed, printed every 10 seconds (fps, the
+worst frame, those over 20 ms, each part's average)
+=================
+*/
+static void Com_SwitchSpeeds( int all, int sv, int ev, int cl ) {
+	static int start, last, frames, worst, slow, sums[6];
+	int now = Sys_Milliseconds( );
+	int parts[6] = { all, sv, ev, cl, time_frontend, time_backend };
+	int i;
+
+	if ( last ) {
+		frames++;
+		worst = MAX( worst, now - last );
+		slow += now - last > 20;
+		for ( i = 0; i < 6; i++ ) {
+			sums[i] += parts[i];
+		}
+	} else {
+		start = now;
+	}
+	last = now;
+	if ( frames && now - start >= 10000 ) {
+		Com_Printf( "speeds %s: %.1f fps, worst %d ms, %d of %d over 20 ms; ms a frame: all %.1f sv %.1f ev %.1f cl %.1f rf %.1f bk %.1f\n",
+			Cvar_VariableString( "mapname" ), frames * 1000.0f / ( now - start ), worst, slow, frames,
+			sums[0] / (float)frames, sums[1] / (float)frames, sums[2] / (float)frames,
+			sums[3] / (float)frames, sums[4] / (float)frames, sums[5] / (float)frames );
+		start = now;
+		frames = worst = slow = 0;
+		memset( sums, 0, sizeof( sums ) );
+	}
+}
+#endif
+
 /*
 =================
 Com_Frame
@@ -2890,31 +2918,7 @@ void Com_Frame( void ) {
 #ifdef __SWITCH__
 		// (2: a line every 10 seconds instead, for measuring on the console)
 		if ( com_speeds->integer == 2 ) {
-			static int start, last, frames, worst, slow, sums[6];
-			int now = Sys_Milliseconds( );
-			int parts[6] = { all, sv, ev, cl, time_frontend, time_backend };
-			int i;
-
-			if ( last ) {
-				frames++;
-				worst = MAX( worst, now - last );
-				slow += now - last > 20;
-				for ( i = 0; i < 6; i++ ) {
-					sums[i] += parts[i];
-				}
-			} else {
-				start = now;
-			}
-			last = now;
-			if ( frames && now - start >= 10000 ) {
-				Com_Printf( "speeds %s: %.1f fps, worst %d ms, %d of %d over 20 ms; ms a frame: all %.1f sv %.1f ev %.1f cl %.1f rf %.1f bk %.1f\n",
-					Cvar_VariableString( "mapname" ), frames * 1000.0f / ( now - start ), worst, slow, frames,
-					sums[0] / (float)frames, sums[1] / (float)frames, sums[2] / (float)frames,
-					sums[3] / (float)frames, sums[4] / (float)frames, sums[5] / (float)frames );
-				start = now;
-				frames = worst = slow = 0;
-				memset( sums, 0, sizeof( sums ) );
-			}
+			Com_SwitchSpeeds( all, sv, ev, cl );
 		} else
 #endif
 		Com_Printf( "frame:%i all:%3i sv:%3i ev:%3i cl:%3i gm:%3i rf:%3i bk:%3i\n",

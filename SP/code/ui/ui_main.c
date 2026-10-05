@@ -4743,6 +4743,10 @@ static void UI_RunMenuScript( char **args ) {
 // from MP 11/12/01
 			trap_Cmd_ExecuteText( EXEC_NOW, "cvar_restart\n" );            // NERVE - SMF - changed order
 			trap_Cmd_ExecuteText( EXEC_NOW, "exec default.cfg\n" );
+#ifdef __SWITCH__
+			// (default.cfg unbinds all: the controller's again)
+			trap_Cmd_ExecuteText( EXEC_NOW, "exec switchpad.cfg\n" );
+#endif
 			trap_Cmd_ExecuteText( EXEC_NOW, "exec language.cfg\n" );       // NERVE - SMF
 			trap_Cmd_ExecuteText( EXEC_NOW, "setRecommended\n" );     // NERVE - SMF
 			Controls_SetDefaults();
@@ -4839,18 +4843,17 @@ static void UI_RunMenuScript( char **args ) {
 			name[0] = '\0';
 			Q_strncpyz( name, UI_Cvar_VariableString( "ui_savegame" ), MAX_NAME_LENGTH );
 
-#ifdef __SWITCH__
-			// (no name typed on a console: a new save named for the map and
-			// numbered after its others, escape1_01, escape1_02...; one picked
-			// from the list is overwritten, confirmed, below)
 			if ( !strlen( name ) ) {
+#ifdef __SWITCH__
+				// (no name typed on a console: a new save named for the map
+				// and numbered after its others, escape1_01, escape1_02...;
+				// one picked from the list is overwritten, confirmed, below)
 				UI_SwitchSaveName( name, sizeof( name ) );
 				trap_Cmd_ExecuteText( EXEC_APPEND, va( "savegame %s\n", name ) );
 				Menus_CloseAll();
-			} else
-#endif
-			if ( !strlen( name ) ) {
+#else
 				Menus_OpenByName( "save_name_popmenu" );
+#endif
 			} else {
 				// find out if there's an existing savegame with that name
 				for ( i = 0; i < uiInfo.savegameCount; i++ ) {
@@ -7021,9 +7024,9 @@ void _UI_KeyEvent( int key, qboolean down ) {
 		if ( menu ) {
 #ifdef __SWITCH__
 			// (the briefing after a level loads: its arrow, bottom right,
-			// shows only with the cursor on it; the controller's A starts the
-			// level anywhere)
-			if ( key == K_ENTER && down && menu->window.name && !Q_stricmp( menu->window.name, "pregame" ) ) {
+			// shows only with the cursor on it; any button or a touch starts
+			// the level)
+			if ( down && menutype == UIMENU_PREGAME ) {
 				char *script = "playerstart";
 
 				UI_RunMenuScript( &script );
@@ -7661,6 +7664,11 @@ cvarTable_t cvarTable[] = {
 	// (the menus and loading screens, 4:3 pictures, stretched over the 16:9
 	// screen by default: a setting of their own, not the HUD's cg_fixedAspect)
 	{ &ui_fixedAspect, "ui_fixedAspect", "0", CVAR_ARCHIVE | CVAR_LATCH },
+	// (the Controller menu's settings of the game modules, there before a
+	// level loads them; the same defaults as cg_main.c's and g_main.c's)
+	{ NULL, "cg_aimFriction", "0.45", CVAR_ARCHIVE },
+	{ NULL, "cg_aimMagnetism", "0.6", CVAR_ARCHIVE },
+	{ NULL, "g_aimAssist", "1", CVAR_ARCHIVE },
 #else
 	{ &ui_fixedAspect, "cg_fixedAspect", "0", CVAR_ARCHIVE | CVAR_LATCH },
 #endif

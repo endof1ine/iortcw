@@ -582,11 +582,6 @@ Sys_LoadGameDll
 Used to load a development dll instead of a virtual machine
 =================
 */
-#ifdef __SWITCH__
-void *Sys_SwitchLoadGameModule( const char *path, vmMainProc *entryPoint,
-	intptr_t ( *systemcalls )( intptr_t, ... ) );
-#endif
-
 void *Sys_LoadGameDll(const char *name,
 	vmMainProc *entryPoint,
 	intptr_t (*systemcalls)(intptr_t, ...))

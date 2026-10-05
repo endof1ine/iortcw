@@ -111,6 +111,12 @@ cvar_t	*j_yaw_axis;
 cvar_t	*j_forward_axis;
 cvar_t	*j_side_axis;
 cvar_t	*j_up_axis;
+#ifdef __SWITCH__
+cvar_t	*j_lookCurve;
+cvar_t	*j_yawSpeed;
+cvar_t	*j_pitchSpeed;
+cvar_t	*j_lookBoost;
+#endif
 
 cvar_t  *cl_activeAction;
 
@@ -3746,6 +3752,13 @@ void CL_Init( void ) {
 	j_forward_axis = Cvar_Get ("j_forward_axis", "1", CVAR_ARCHIVE);
 	j_side_axis =    Cvar_Get ("j_side_axis",    "0", CVAR_ARCHIVE);
 	j_up_axis =      Cvar_Get ("j_up_axis",      "4", CVAR_ARCHIVE);
+#ifdef __SWITCH__
+	// (the look stick's response, cl_input.c's CL_JoystickMove)
+	j_lookCurve =    Cvar_Get ("j_lookCurve",    "2", CVAR_ARCHIVE);
+	j_yawSpeed =     Cvar_Get ("j_yawSpeed",     "180", CVAR_ARCHIVE);
+	j_pitchSpeed =   Cvar_Get ("j_pitchSpeed",   "100", CVAR_ARCHIVE);
+	j_lookBoost =    Cvar_Get ("j_lookBoost",    "1.5", CVAR_ARCHIVE);
+#endif
 
 	Cvar_CheckRange(j_pitch_axis, 0, MAX_JOYSTICK_AXIS-1, qtrue);
 	Cvar_CheckRange(j_yaw_axis, 0, MAX_JOYSTICK_AXIS-1, qtrue);

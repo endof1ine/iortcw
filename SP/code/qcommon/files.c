@@ -1508,7 +1508,12 @@ long FS_FOpenFileReadDir(const char *filename, searchpath_t *search, fileHandle_
 					if(uniqueFILE)
 					{
 						// open a new file on the pakfile
+#ifdef __SWITCH__
+						// (its directory as the pak's handle read it)
+						fsh[*file].handleFiles.file.z = unzReOpen(pak->pakFilename, pak->handle);
+#else
 						fsh[*file].handleFiles.file.z = unzOpen(pak->pakFilename);
+#endif
 
 						if(fsh[*file].handleFiles.file.z == NULL)
 							Com_Error(ERR_FATAL, "Couldn't open %s", pak->pakFilename);

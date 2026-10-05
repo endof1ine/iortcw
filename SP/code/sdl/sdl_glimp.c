@@ -510,10 +510,10 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder, qbool
 	{
 		// (SDL gives the docked 1080 lines in handheld mode too: the
 		// screen's own 720 there, not drawn larger and scaled down)
-		int Sys_SwitchDocked( void );
+		qboolean docked = Sys_SwitchDocked( );
 
-		desktopMode.w = Sys_SwitchDocked( ) ? 1920 : 1280;
-		desktopMode.h = Sys_SwitchDocked( ) ? 1080 : 720;
+		desktopMode.w = docked ? 1920 : 1280;
+		desktopMode.h = docked ? 1080 : 720;
 	}
 #endif
 

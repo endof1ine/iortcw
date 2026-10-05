@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Writes the Switch's controller menus (romfs/main/ui/switch_*.menu): the
-same rows for the main menu's and the in-game Controls, which these replace
-on the Switch (ui_main.c's UI_SwitchMenus). Run after editing ROWS."""
+"""Writes the Switch's controller menus (romfs/main/ui/): their rows once,
+switch_controller_items.menu, included by the main menu's and the in-game
+Controls, which these replace on the Switch (ui_main.c's UI_SwitchMenus). Run
+after editing ROWS."""
 
 import os
 
@@ -61,7 +62,10 @@ def row(label, cvar, kind, values, y):
 """ % (label, kind_lines, y)
 
 
-def menu(name, extra):
+ITEMS = "switch_controller_items.menu"
+
+
+def items():
     rows, y = [], 32
     for r in ROWS:
         if r is None:
@@ -69,19 +73,8 @@ def menu(name, extra):
             continue
         rows.append(row(*r, y))
         y += 15
-    return """// Written by gen_menus.py: the Switch's controller settings
-#include "ui/menudef.h"
-
-{
-menuDef {
-	name "%s"
-	visible 0
-	fullscreen 0
-	rect 100 125 443 340
-	focusColor 1 .75 0 1
-	style 1
-	border 1
-%s
+    return """// Written by gen_menus.py: the Switch's controller settings, the rows of
+// both Controls menus (switch_controls.menu, switch_ingame_controls.menu)
 	itemDef {
 		name window
 		rect 0 2 443 300
@@ -109,12 +102,32 @@ menuDef {
 		visible 1
 		decoration
 	}
-%s}
+%s""" % "".join(rows)
+
+
+def menu(name, extra):
+    return """// Written by gen_menus.py: the Switch's controller settings
+#include "ui/menudef.h"
+
+{
+menuDef {
+	name "%s"
+	visible 0
+	fullscreen 0
+	rect 100 125 443 340
+	focusColor 1 .75 0 1
+	style 1
+	border 1
+%s
+#include "ui/%s"
 }
-""" % (name, extra, "".join(rows))
+}
+""" % (name, extra, ITEMS)
 
 
-here = os.path.dirname(os.path.abspath(__file__))
+here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "romfs", "main", "ui")
+with open(os.path.join(here, ITEMS), "w") as f:
+    f.write(items())
 for filename, (name, extra) in MENUS.items():
-    with open(os.path.join(here, "romfs", "main", "ui", filename), "w") as f:
+    with open(os.path.join(here, filename), "w") as f:
         f.write(menu(name, extra))

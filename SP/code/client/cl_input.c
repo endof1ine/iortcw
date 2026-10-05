@@ -463,62 +463,44 @@ void CL_JoystickMove( usercmd_t *cmd ) {
 	}
 
 #ifdef __SWITCH__
-	/* the look stick as Halo's on the Xbox: its push squared (j_lookCurve), so
-	a small one aims finely, up to j_yawSpeed and j_pitchSpeed degrees a
-	second, and held all the way sideways it speeds up to j_lookBoost times
-	that within 0.3 seconds. (Stock: linear, about 720 degrees a second.) The
-	directions stay j_yaw's and j_pitch's. */
+	/* the sticks as Halo's on the Xbox. Looking: the push squared
+	(j_lookCurve), so a small one aims finely, up to j_yawSpeed and
+	j_pitchSpeed degrees a second, and held all the way sideways it speeds up
+	to j_lookBoost times that within 0.3 seconds (stock: linear, about 720
+	degrees a second). Moving: the push the speed (all of it running, 127; the
+	stock j_forward and j_side reach that at a twentieth of it); a toggled
+	sprint ends when the stick is let go. The axes come signed by j_yaw,
+	j_pitch, j_forward and j_side already (sdl_input.c's KeyToAxisAndSign):
+	their signs invert there */
 	{
-		static cvar_t *lookCurve, *yawSpeed, *pitchSpeed, *lookBoost;
 		static float boost = 1.0f;
 		float seconds = cls.frametime * 0.001f;
 		float yawPush = cl.joystickAxis[j_yaw_axis->integer] / 32767.0f;
 		float pitchPush = cl.joystickAxis[j_pitch_axis->integer] / 32767.0f;
-
-		if ( !lookCurve ) {
-			lookCurve = Cvar_Get( "j_lookCurve", "2", CVAR_ARCHIVE );
-			yawSpeed = Cvar_Get( "j_yawSpeed", "180", CVAR_ARCHIVE );
-			pitchSpeed = Cvar_Get( "j_pitchSpeed", "100", CVAR_ARCHIVE );
-			lookBoost = Cvar_Get( "j_lookBoost", "1.5", CVAR_ARCHIVE );
-		}
-		if ( fabs( yawPush ) > 0.95f && lookBoost->value > 1.0f ) {
-			boost += seconds / 0.3f * ( lookBoost->value - 1.0f );
-			if ( boost > lookBoost->value )
-				boost = lookBoost->value;
-		} else {
-			boost = 1.0f;
-		}
-		// (the axes come signed by j_yaw and j_pitch already, sdl_input.c's
-		// KeyToAxisAndSign: their signs invert the look there)
-		yaw = -( yawPush < 0 ? -1.0f : 1.0f ) * pow( fabs( yawPush ), lookCurve->value ) * yawSpeed->value * boost;
-		pitch = ( pitchPush < 0 ? -1.0f : 1.0f ) * pow( fabs( pitchPush ), lookCurve->value ) * pitchSpeed->value;
-		// (the cgame's scale, as the mouse's: slower zoomed in, and on an
-		// enemy, cg_view.c's CG_AimAssist)
-		yaw *= cl.cgameSensitivity;
-		pitch *= cl.cgameSensitivity;
-		// Halo's magnetism: the view turned with the enemy near the aim
-		// (the cgame's cl.aimDrift, degrees a second), while the player
-		// moves or aims, never by itself
-		{
-			float movePush = fabs( cl.joystickAxis[j_forward_axis->integer] ) + fabs( cl.joystickAxis[j_side_axis->integer] );
-
-			if ( fabs( yawPush ) > 0.1f || fabs( pitchPush ) > 0.1f || movePush > 0.2f * 32767.0f ) {
-				cl.viewangles[YAW] += cl.aimDrift[0] * seconds;
-				cl.viewangles[PITCH] += cl.aimDrift[1] * seconds;
-			}
-		}
-		// (degrees a second: anglespeed is the frame's seconds)
-		anglespeed = seconds;
-	}
-	/* moving as Halo's on the Xbox: the stick's push the speed (all of it
-	running, 127; the stock j_forward and j_side reach that at a twentieth of
-	it), directions j_forward's and j_side's; a toggled sprint ends when the
-	stick is let go */
-	{
 		float forwardPush = cl.joystickAxis[j_forward_axis->integer] / 32767.0f;
 		float sidePush = cl.joystickAxis[j_side_axis->integer] / 32767.0f;
 
-		// (signed by j_forward and j_side already, as the look's axes)
+		if ( fabs( yawPush ) > 0.95f && j_lookBoost->value > 1.0f ) {
+			boost = MIN( boost + seconds / 0.3f * ( j_lookBoost->value - 1.0f ), j_lookBoost->value );
+		} else {
+			boost = 1.0f;
+		}
+		yaw = -( yawPush < 0 ? -1.0f : 1.0f ) * pow( fabs( yawPush ), j_lookCurve->value ) * j_yawSpeed->value * boost;
+		pitch = ( pitchPush < 0 ? -1.0f : 1.0f ) * pow( fabs( pitchPush ), j_lookCurve->value ) * j_pitchSpeed->value;
+		// (the cgame's scale, as the mouse's: slower zoomed in, and near an
+		// enemy, cg_view.c's CG_AimAssist)
+		yaw *= cl.cgameSensitivity;
+		pitch *= cl.cgameSensitivity;
+		// Halo's magnetism: the view turned with the enemy near the aim (the
+		// cgame's cl.aimDrift, degrees a second), while the player moves or
+		// aims, never by itself
+		if ( fabs( yawPush ) > 0.1f || fabs( pitchPush ) > 0.1f || fabs( forwardPush ) + fabs( sidePush ) > 0.2f ) {
+			cl.viewangles[YAW] += cl.aimDrift[0] * seconds;
+			cl.viewangles[PITCH] += cl.aimDrift[1] * seconds;
+		}
+		// (degrees a second: anglespeed is the frame's seconds)
+		anglespeed = seconds;
+
 		forward = -forwardPush * 127.0f;
 		right = sidePush * 127.0f;
 		if ( forwardPush * forwardPush + sidePush * sidePush < 0.3f * 0.3f ) {

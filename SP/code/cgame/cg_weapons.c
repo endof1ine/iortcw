@@ -4593,6 +4593,57 @@ void CG_MortarEFX( centity_t *cent ) {
 //----(SA)	end
 
 
+#ifdef __SWITCH__
+/*
+=================
+CG_FireRumble
+
+The controller's kick for the player's own shot, Halo's way: a short tap for
+pistols and submachine guns, more for rifles. The Panzerfaust's is its camera
+shake's, CG_StartShakeCamera
+=================
+*/
+static void CG_FireRumble( int weapon ) {
+	switch ( weapon ) {
+	case WP_KNIFE:
+	case WP_GRENADE_LAUNCHER:
+	case WP_GRENADE_PINEAPPLE:
+	case WP_DYNAMITE:
+		CG_Rumble( 0.10f, 0.15f, 60 );
+		break;
+	case WP_LUGER:
+	case WP_COLT:
+	case WP_SILENCER:
+	case WP_AKIMBO:
+		CG_Rumble( 0.20f, 0.30f, 60 );
+		break;
+	case WP_MP40:
+	case WP_THOMPSON:
+	case WP_STEN:
+	case WP_FLAMETHROWER:
+	case WP_TESLA:
+		CG_Rumble( 0.15f, 0.25f, 50 );
+		break;
+	case WP_VENOM:
+		CG_Rumble( 0.30f, 0.30f, 50 );
+		break;
+	case WP_MAUSER:
+	case WP_GARAND:
+	case WP_FG42:
+	case WP_SNIPERRIFLE:
+	case WP_SNOOPERSCOPE:
+	case WP_FG42SCOPE:
+		CG_Rumble( 0.45f, 0.50f, 90 );
+		break;
+	case WP_PANZERFAUST:
+		break;
+	default:
+		CG_Rumble( 0.20f, 0.25f, 60 );
+		break;
+	}
+}
+#endif
+
 // RF
 /*
 ==============
@@ -4608,6 +4659,9 @@ void CG_WeaponFireRecoil( int weapon ) {
 	pitchRecoilAdd = 0;
 	pitchAdd = 0;
 	yawRandom = 0;
+#ifdef __SWITCH__
+	CG_FireRumble( weapon );
+#endif
 	//
 	switch ( weapon ) {
 	case WP_LUGER:
@@ -4683,56 +4737,6 @@ Caused by an EV_FIRE_WEAPON event
 
 ================
 */
-#ifdef __SWITCH__
-/*
-=================
-CG_FireRumble
-
-The controller's kick for the player's own shot, Halo's way: a short tap for
-pistols and submachine guns, more for rifles, a heavy one for the Panzerfaust
-=================
-*/
-static void CG_FireRumble( int weapon ) {
-	switch ( weapon ) {
-	case WP_KNIFE:
-	case WP_GRENADE_LAUNCHER:
-	case WP_GRENADE_PINEAPPLE:
-	case WP_DYNAMITE:
-		CG_Rumble( 0.10f, 0.15f, 60 );
-		break;
-	case WP_LUGER:
-	case WP_COLT:
-	case WP_SILENCER:
-	case WP_AKIMBO:
-		CG_Rumble( 0.20f, 0.30f, 60 );
-		break;
-	case WP_MP40:
-	case WP_THOMPSON:
-	case WP_STEN:
-	case WP_FLAMETHROWER:
-	case WP_TESLA:
-		CG_Rumble( 0.15f, 0.25f, 50 );
-		break;
-	case WP_VENOM:
-		CG_Rumble( 0.30f, 0.30f, 50 );
-		break;
-	case WP_MAUSER:
-	case WP_GARAND:
-	case WP_FG42:
-	case WP_SNIPERRIFLE:
-	case WP_SNOOPERSCOPE:
-	case WP_FG42SCOPE:
-		CG_Rumble( 0.45f, 0.50f, 90 );
-		break;
-	case WP_PANZERFAUST:
-		CG_Rumble( 0.80f, 0.60f, 250 );
-		break;
-	default:
-		CG_Rumble( 0.20f, 0.25f, 60 );
-		break;
-	}
-}
-#endif
 
 void CG_FireWeapon( centity_t *cent ) {
 	entityState_t *ent;
@@ -4743,24 +4747,17 @@ void CG_FireWeapon( centity_t *cent ) {
 
 	ent = &cent->currentState;
 
-#ifdef __SWITCH__
-	if ( cent->currentState.clientNum == cg.snap->ps.clientNum ) {
-		if ( cg.snap->ps.persistant[PERS_HWEAPON_USE] ) {
-			if ( !cg.snap->ps.gunfx ) {
-				CG_Rumble( 0.35f, 0.40f, 70 );  // (the mounted MG42)
-			}
-		} else if ( ent->weapon > WP_NONE && ent->weapon < WP_NUM_WEAPONS ) {
-			CG_FireRumble( ent->weapon );
-		}
-	}
-#endif
-
 	// Rafael - mg42
 	if ( ( cent->currentState.clientNum == cg.snap->ps.clientNum && cg.snap->ps.persistant[PERS_HWEAPON_USE] ) ||
 		 ( cent->currentState.clientNum != cg.snap->ps.clientNum && ( cent->currentState.eFlags & EF_MG42_ACTIVE ) ) ) {
 		if ( cg.snap->ps.gunfx ) {
 			return;
 		}
+#ifdef __SWITCH__
+		if ( cent->currentState.clientNum == cg.snap->ps.clientNum ) {
+			CG_Rumble( 0.35f, 0.40f, 70 );
+		}
+#endif
 
 		trap_S_StartSound( NULL, cent->currentState.number, CHAN_WEAPON, hWeaponSnd );
 		//trap_S_StartSound( NULL, ent->number, CHAN_WEAPON, hWeaponSnd );

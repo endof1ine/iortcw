@@ -259,11 +259,6 @@ static voidpf ZCALLBACK switch_open64_file_func (voidpf opaque, const void* file
     return z;
 }
 
-static voidpf ZCALLBACK switch_open_file_func (voidpf opaque, const char* filename, int mode)
-{
-    return switch_open64_file_func(opaque, filename, mode);
-}
-
 static uLong ZCALLBACK switch_read_file_func (voidpf opaque, voidpf stream, void* buf, uLong size)
 {
     switch_zfile *z = (switch_zfile *)stream;
@@ -299,27 +294,9 @@ static uLong ZCALLBACK switch_read_file_func (voidpf opaque, voidpf stream, void
     return done;
 }
 
-static uLong ZCALLBACK switch_write_file_func (voidpf opaque, voidpf stream, const void* buf, uLong size)
-{
-    switch_zfile *z = (switch_zfile *)stream;
-    uLong n;
-
-    z->length = 0;
-    if (FSEEKO_FUNC(z->file, z->pos, SEEK_SET) != 0)
-        return 0;
-    n = (uLong)fwrite(buf, 1, (size_t)size, z->file);
-    z->pos += n;
-    return n;
-}
-
 static ZPOS64_T ZCALLBACK switch_tell64_file_func (voidpf opaque, voidpf stream)
 {
     return ((switch_zfile *)stream)->pos;
-}
-
-static long ZCALLBACK switch_tell_file_func (voidpf opaque, voidpf stream)
-{
-    return (long)((switch_zfile *)stream)->pos;
 }
 
 static long ZCALLBACK switch_seek64_file_func (voidpf opaque, voidpf stream, ZPOS64_T offset, int origin)
@@ -343,14 +320,6 @@ static long ZCALLBACK switch_seek64_file_func (voidpf opaque, voidpf stream, ZPO
     }
 }
 
-static long ZCALLBACK switch_seek_file_func (voidpf opaque, voidpf stream, uLong offset, int origin)
-{
-    /* (SEEK_CUR's offset may be negative: back to signed before widening) */
-    if (origin == ZLIB_FILEFUNC_SEEK_SET)
-        return switch_seek64_file_func(opaque, stream, (ZPOS64_T)offset, origin);
-    return switch_seek64_file_func(opaque, stream, (ZPOS64_T)(long)offset, origin);
-}
-
 static int ZCALLBACK switch_close_file_func (voidpf opaque, voidpf stream)
 {
     switch_zfile *z = (switch_zfile *)stream;
@@ -369,15 +338,6 @@ static int ZCALLBACK switch_error_file_func (voidpf opaque, voidpf stream)
 void fill_fopen_filefunc (pzlib_filefunc_def)
   zlib_filefunc_def* pzlib_filefunc_def;
 {
-#ifdef __SWITCH__
-    pzlib_filefunc_def->zopen_file = switch_open_file_func;
-    pzlib_filefunc_def->zread_file = switch_read_file_func;
-    pzlib_filefunc_def->zwrite_file = switch_write_file_func;
-    pzlib_filefunc_def->ztell_file = switch_tell_file_func;
-    pzlib_filefunc_def->zseek_file = switch_seek_file_func;
-    pzlib_filefunc_def->zclose_file = switch_close_file_func;
-    pzlib_filefunc_def->zerror_file = switch_error_file_func;
-#else
     pzlib_filefunc_def->zopen_file = fopen_file_func;
     pzlib_filefunc_def->zread_file = fread_file_func;
     pzlib_filefunc_def->zwrite_file = fwrite_file_func;
@@ -385,7 +345,6 @@ void fill_fopen_filefunc (pzlib_filefunc_def)
     pzlib_filefunc_def->zseek_file = fseek_file_func;
     pzlib_filefunc_def->zclose_file = fclose_file_func;
     pzlib_filefunc_def->zerror_file = ferror_file_func;
-#endif
     pzlib_filefunc_def->opaque = NULL;
 }
 
@@ -394,7 +353,7 @@ void fill_fopen64_filefunc (zlib_filefunc64_def*  pzlib_filefunc_def)
 #ifdef __SWITCH__
     pzlib_filefunc_def->zopen64_file = switch_open64_file_func;
     pzlib_filefunc_def->zread_file = switch_read_file_func;
-    pzlib_filefunc_def->zwrite_file = switch_write_file_func;
+    pzlib_filefunc_def->zwrite_file = NULL;  /* (the paks are only read) */
     pzlib_filefunc_def->ztell64_file = switch_tell64_file_func;
     pzlib_filefunc_def->zseek64_file = switch_seek64_file_func;
     pzlib_filefunc_def->zclose_file = switch_close_file_func;

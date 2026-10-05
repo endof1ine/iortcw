@@ -636,24 +636,7 @@ local unzFile unzOpenInternal (const void *path,
     if (us.filestream==NULL)
         return NULL;
 
-#ifdef __SWITCH__
-    /* (zip64's locator, when there is one, sits just before the end record:
-       looked for there, not by reading the last 64 KB backwards, slow on the
-       SD card for each sound's own handle on its pak) */
-    ZPOS64_T end = unz64local_SearchCentralDir(&us.z_filefunc,us.filestream);
-    {
-        uLong signature;
-
-        central_pos = 0;
-        if (end >= 20 &&
-            ZSEEK64(us.z_filefunc, us.filestream, end - 20, ZLIB_FILEFUNC_SEEK_SET) == 0 &&
-            unz64local_getLong(&us.z_filefunc, us.filestream, &signature) == UNZ_OK &&
-            signature == 0x07064b50)
-            central_pos = unz64local_SearchCentralDir64(&us.z_filefunc,us.filestream);
-    }
-#else
     central_pos = unz64local_SearchCentralDir64(&us.z_filefunc,us.filestream);
-#endif
     if (central_pos)
     {
         uLong uS;
@@ -715,11 +698,7 @@ local unzFile unzOpenInternal (const void *path,
     }
     else
     {
-#ifdef __SWITCH__
-        central_pos = end;  /* (searched for above) */
-#else
         central_pos = unz64local_SearchCentralDir(&us.z_filefunc,us.filestream);
-#endif
         if (central_pos==0)
             err=UNZ_ERRNO;
 
@@ -836,6 +815,35 @@ extern unzFile ZEXPORT unzOpen64 (const void *path)
 {
     return unzOpenInternal(path, NULL, 1);
 }
+
+#ifdef __SWITCH__
+/*
+  Another handle on a zip file already open (file): its directory as that
+  one read it, only the file opened again, as id's Quake III did. files.c's
+  handles of their own, one for each sound, without searching the file's
+  end (64 KB backwards, for zip64) each time.
+*/
+extern unzFile ZEXPORT unzReOpen (const void *path, unzFile file)
+{
+    unz64_s* s;
+
+    if (file==NULL)
+        return NULL;
+    s=(unz64_s*)ALLOC(sizeof(unz64_s));
+    if (s==NULL)
+        return NULL;
+    *s=*(unz64_s*)file;
+    s->filestream = ZOPEN64(s->z_filefunc, path,
+                            ZLIB_FILEFUNC_MODE_READ | ZLIB_FILEFUNC_MODE_EXISTING);
+    if (s->filestream==NULL)
+    {
+        TRYFREE(s);
+        return NULL;
+    }
+    s->pfile_in_zip_read = NULL;
+    return (unzFile)s;
+}
+#endif
 
 /*
   Close a ZipFile opened with unzOpen.

@@ -49,8 +49,6 @@ Sys_SwitchLoadGameModule hands out their entry points by name.
 
 #define SWITCH_GAME_PATH "/switch/iortcw"
 
-qboolean stdinIsATTY;
-
 /*
 ==================
 Sys_DefaultHomePath
@@ -78,7 +76,6 @@ char *Sys_GogPath( void )
 Sys_Milliseconds
 ================
 */
-int curtime;
 int Sys_Milliseconds( void )
 {
 	static u64 base;
@@ -86,8 +83,7 @@ int Sys_Milliseconds( void )
 
 	if ( !base )
 		base = now;
-	curtime = (int)( now - base );
-	return curtime;
+	return (int)( now - base );
 }
 
 qboolean Sys_RandomBytes( byte *string, int len )
@@ -145,12 +141,15 @@ mode_t umask( mode_t mask )
 FILE *Sys_FOpen( const char *ospath, const char *mode )
 {
 	struct stat buf;
+	FILE *f = fopen( ospath, mode );
 
-	// check if path exists and is a directory
-	if ( !stat( ospath, &buf ) && S_ISDIR( buf.st_mode ) )
+	// (not a directory; checked after the open, as the engine looks for
+	// many files that aren't there, each look a call to the file service)
+	if ( f && !fstat( fileno( f ), &buf ) && S_ISDIR( buf.st_mode ) ) {
+		fclose( f );
 		return NULL;
-
-	return fopen( ospath, mode );
+	}
+	return f;
 }
 
 qboolean Sys_Mkdir( const char *path )
@@ -302,13 +301,7 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 	}
 
 	while ( ( d = readdir( fdir ) ) != NULL ) {
-		Com_sprintf( search, sizeof( search ), "%s/%s", directory, d->d_name );
-		if ( stat( search, &st ) == -1 )
-			continue;
-		if ( ( dironly && !( st.st_mode & S_IFDIR ) ) ||
-			( !dironly && ( st.st_mode & S_IFDIR ) ) )
-			continue;
-
+		// (the name first: a stat is a call to the file service)
 		if ( *extension ) {
 			if ( strlen( d->d_name ) < extLen ||
 				Q_stricmp(
@@ -317,6 +310,13 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 				continue; // didn't match
 			}
 		}
+
+		Com_sprintf( search, sizeof( search ), "%s/%s", directory, d->d_name );
+		if ( stat( search, &st ) == -1 )
+			continue;
+		if ( ( dironly && !( st.st_mode & S_IFDIR ) ) ||
+			( !dironly && ( st.st_mode & S_IFDIR ) ) )
+			continue;
 
 		if ( nfiles == MAX_FOUND_FILES - 1 )
 			break;
@@ -442,7 +442,6 @@ void Sys_PlatformInit( void )
 	romfsInit();
 	Sys_SwitchCpuBoost( qtrue );
 	Sys_SetFloatEnv();
-	stdinIsATTY = qfalse;
 }
 
 void Sys_PlatformExit( void )
@@ -618,11 +617,10 @@ the module's table entry, which Sys_UnloadDll leaves be.
 void *Sys_SwitchLoadGameModule( const char *path, vmMainProc *entryPoint,
 	intptr_t ( *systemcalls )( intptr_t, ... ) )
 {
-	const char *file = strrchr( path, PATH_SEP );
+	const char *file = COM_SkipPath( (char *)path );
 	size_t length;
 	int i;
 
-	file = file ? file + 1 : path;
 	length = strcspn( file, "." );
 	for ( i = 0; i < ARRAY_LEN( switchGameModules ); i++ )
 	{
