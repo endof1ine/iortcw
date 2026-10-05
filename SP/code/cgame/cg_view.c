@@ -1440,26 +1440,35 @@ extern void CG_SetupDlightstyles( void );
 #ifdef __SWITCH__
 /*
 =================
-CG_AimFriction
+CG_Rumble
 
-Halo's aim friction, for the controller: the look slowed (the sensitivity the
-client gets: cg_aimFriction of it) while the aim is on a living, visible
-enemy - within cg_aimFrictionRadius units of its chest, at its distance, and
-never less than 1.5 degrees, so far ones get help too. Enemies by character:
-not the allies, nor civilians.
+The controller's motors (0 to 1), for so long: the client's "rumble"
+(sdl_input.c), scaled there by in_rumble
 =================
 */
-static void CG_AimFriction( void ) {
-	int i;
+void CG_Rumble( float low, float high, int milliseconds ) {
+	trap_SendConsoleCommand( va( "rumble %.2f %.2f %d\n", low, high, milliseconds ) );
+}
 
-	if ( cg_aimFriction.value >= 1.0f || cg_aimFriction.value <= 0.0f || !cg.snap ) {
-		return;
-	}
+/*
+=================
+CG_AimTarget
+
+The enemy under the aim, -1 none: a living, visible one whose chest is within
+cg_aimFrictionRadius units of it at its distance (never less than 1.5
+degrees, so far ones count too), the nearest to it. Enemies by character: not
+the allies, nor civilians.
+=================
+*/
+static int CG_AimTarget( vec3_t targetPoint ) {
+	int i, best = -1;
+	float bestDot = -1.0f;
+
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		centity_t *cent = &cg_entities[i];
 		int aiChar = cent->currentState.aiChar;
 		vec3_t point, dir;
-		float distance, cone;
+		float distance, cone, dot;
 		trace_t trace;
 
 		if ( !cent->currentValid || i == cg.snap->ps.clientNum || aiChar == AICHAR_NONE ||
@@ -1478,15 +1487,69 @@ static void CG_AimFriction( void ) {
 		if ( cone < DEG2RAD( 1.5f ) ) {
 			cone = DEG2RAD( 1.5f );
 		}
-		if ( DotProduct( dir, cg.refdef.viewaxis[0] ) < cos( cone ) ) {
+		dot = DotProduct( dir, cg.refdef.viewaxis[0] );
+		if ( dot < cos( cone ) || dot <= bestDot ) {
 			continue;
 		}
 		CG_Trace( &trace, cg.refdef.vieworg, NULL, NULL, point, cg.snap->ps.clientNum, MASK_SHOT );
 		if ( trace.fraction < 1.0f && trace.entityNum != i ) {
 			continue;
 		}
-		cg.zoomSensitivity *= cg_aimFriction.value;
-		return;
+		best = i;
+		bestDot = dot;
+		VectorCopy( point, targetPoint );
+	}
+	return best;
+}
+
+/*
+=================
+CG_AimAssist
+
+Halo's aim assist, for the controller, from the enemy under the aim: friction,
+the look slowed (the sensitivity the client gets: cg_aimFriction of it); and
+magnetism, the view turned with the enemy as it moves across the aim
+(cg_aimMagnetism of its drift, to the client as cl_aimDriftYaw and
+cl_aimDriftPitch, which it applies while the player moves or aims)
+=================
+*/
+static void CG_AimAssist( void ) {
+	static int lastTarget = -1, lastTime;
+	static vec2_t lastOffset;
+	static float publishedYaw, publishedPitch;
+	float driftYaw = 0.0f, driftPitch = 0.0f;
+	vec3_t point, dir, angles;
+
+	cg.aimTarget = cg.snap ? CG_AimTarget( point ) : -1;
+	if ( cg.aimTarget >= 0 ) {
+		vec2_t offset;
+
+		if ( cg_aimFriction.value > 0.0f && cg_aimFriction.value < 1.0f ) {
+			cg.zoomSensitivity *= cg_aimFriction.value;
+		}
+		VectorSubtract( point, cg.refdef.vieworg, dir );
+		vectoangles( dir, angles );
+		offset[0] = AngleSubtract( angles[YAW], cg.refdefViewAngles[YAW] );
+		offset[1] = AngleSubtract( angles[PITCH], cg.refdefViewAngles[PITCH] );
+		if ( cg.aimTarget == lastTarget && cg.time > lastTime && cg.time - lastTime < 200 ) {
+			float seconds = ( cg.time - lastTime ) / 1000.0f;
+
+			driftYaw = cg_aimMagnetism.value * AngleSubtract( offset[0], lastOffset[0] ) / seconds;
+			driftPitch = cg_aimMagnetism.value * AngleSubtract( offset[1], lastOffset[1] ) / seconds;
+			// (a target's own motion, not a flick: at most 90 degrees a second)
+			driftYaw = driftYaw < -90.0f ? -90.0f : driftYaw > 90.0f ? 90.0f : driftYaw;
+			driftPitch = driftPitch < -90.0f ? -90.0f : driftPitch > 90.0f ? 90.0f : driftPitch;
+		}
+		lastOffset[0] = offset[0];
+		lastOffset[1] = offset[1];
+		lastTime = cg.time;
+	}
+	lastTarget = cg.aimTarget;
+	if ( driftYaw != publishedYaw || driftPitch != publishedPitch ) {
+		trap_Cvar_Set( "cl_aimDriftYaw", va( "%.2f", driftYaw ) );
+		trap_Cvar_Set( "cl_aimDriftPitch", va( "%.2f", driftPitch ) );
+		publishedYaw = driftYaw;
+		publishedPitch = driftPitch;
 	}
 }
 #endif
@@ -1684,7 +1747,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	DEBUGTIME
 
 #ifdef __SWITCH__
-	CG_AimFriction();
+	CG_AimAssist();
 #endif
 	// let the client system know what our weapon, holdable item and zoom settings are
 	trap_SetUserCmdValue( cg.weaponSelect, cg.holdableSelect, cg.zoomSensitivity, cg.cld );

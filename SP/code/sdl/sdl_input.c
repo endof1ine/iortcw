@@ -821,6 +821,32 @@ static void IN_SwitchTouchFrame( void )
 		switchTouch.release = qfalse;
 	}
 }
+
+/*
+=================
+IN_SwitchRumble_f
+
+"rumble <low> <high> <milliseconds>": the controller's motors (0 to 1 each),
+for the cgame's firing, damage and explosions, scaled by in_rumble (0 off)
+=================
+*/
+static void IN_SwitchRumble_f( void )
+{
+	cvar_t *rumble = Cvar_Get( "in_rumble", "1", CVAR_ARCHIVE );
+	float low, high;
+	int ms;
+
+	if ( !gamepad || Cmd_Argc( ) < 4 || rumble->value <= 0.0f )
+		return;
+	low = atof( Cmd_Argv( 1 ) ) * rumble->value;
+	high = atof( Cmd_Argv( 2 ) ) * rumble->value;
+	ms = atoi( Cmd_Argv( 3 ) );
+	low = low < 0.0f ? 0.0f : low > 1.0f ? 1.0f : low;
+	high = high < 0.0f ? 0.0f : high > 1.0f ? 1.0f : high;
+	if ( ms <= 0 )
+		return;
+	SDL_GameControllerRumble( gamepad, (Uint16)( low * 65535.0f ), (Uint16)( high * 65535.0f ), ms );
+}
 #endif
 
 static void IN_GamepadMove( void )
@@ -1474,6 +1500,7 @@ void IN_Init( void *windowData )
 #else
 	// (the touchscreen is read as itself, IN_SwitchTouch: not also as a mouse)
 	SDL_SetHint( SDL_HINT_TOUCH_MOUSE_EVENTS, "0" );
+	Cmd_AddCommand( "rumble", IN_SwitchRumble_f );
 #endif
 
 	mouseAvailable = ( in_mouse->value != 0 );
@@ -1494,6 +1521,9 @@ IN_Shutdown
 */
 void IN_Shutdown( void )
 {
+#ifdef __SWITCH__
+	Cmd_RemoveCommand( "rumble" );
+#endif
 	SDL_StopTextInput( );
 
 	IN_DeactivateMouse( Cvar_VariableIntegerValue( "r_fullscreen" ) != 0 );

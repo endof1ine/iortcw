@@ -171,6 +171,7 @@ vmCvar_t cg_fixedAspectFOV;
 #ifdef __SWITCH__
 vmCvar_t cg_aimFriction;
 vmCvar_t cg_aimFrictionRadius;
+vmCvar_t cg_aimMagnetism;
 #endif
 vmCvar_t cg_oldWolfUI;
 vmCvar_t cg_drawStatusHead;
@@ -312,6 +313,7 @@ cvarTable_t cvarTable[] = {
 	// (Halo's aim friction for the controller: cg_view.c's CG_AimFriction)
 	{ &cg_aimFriction, "cg_aimFriction", "0.45", CVAR_ARCHIVE },
 	{ &cg_aimFrictionRadius, "cg_aimFrictionRadius", "40", CVAR_ARCHIVE },
+	{ &cg_aimMagnetism, "cg_aimMagnetism", "0.6", CVAR_ARCHIVE },
 #endif
 	{ &cg_oldWolfUI, "cg_oldWolfUI", "0", CVAR_ARCHIVE },
 	{ &cg_drawStatusHead, "cg_drawStatusHead", "0", CVAR_ARCHIVE },

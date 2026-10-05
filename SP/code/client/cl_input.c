@@ -493,9 +493,25 @@ void CL_JoystickMove( usercmd_t *cmd ) {
 		pitch = ( j_pitch->value < 0 ? -1.0f : 1.0f ) * ( pitchPush < 0 ? -1.0f : 1.0f ) *
 			pow( fabs( pitchPush ), lookCurve->value ) * pitchSpeed->value;
 		// (the cgame's scale, as the mouse's: slower zoomed in, and on an
-		// enemy, cg_view.c's CG_AimFriction)
+		// enemy, cg_view.c's CG_AimAssist)
 		yaw *= cl.cgameSensitivity;
 		pitch *= cl.cgameSensitivity;
+		// Halo's magnetism: the view turned with the enemy under the aim
+		// (the cgame's cl_aimDrift*, degrees a second), while the player
+		// moves or aims, never by itself
+		{
+			static cvar_t *driftYaw, *driftPitch;
+			float movePush = fabs( cl.joystickAxis[j_forward_axis->integer] ) + fabs( cl.joystickAxis[j_side_axis->integer] );
+
+			if ( !driftYaw ) {
+				driftYaw = Cvar_Get( "cl_aimDriftYaw", "0", 0 );
+				driftPitch = Cvar_Get( "cl_aimDriftPitch", "0", 0 );
+			}
+			if ( fabs( yawPush ) > 0.1f || fabs( pitchPush ) > 0.1f || movePush > 0.2f * 32767.0f ) {
+				cl.viewangles[YAW] += driftYaw->value * seconds;
+				cl.viewangles[PITCH] += driftPitch->value * seconds;
+			}
+		}
 		// (degrees a second: anglespeed is the frame's seconds)
 		anglespeed = seconds;
 	}

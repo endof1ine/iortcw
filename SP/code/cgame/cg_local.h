@@ -807,6 +807,9 @@ typedef struct {
 	int zoomedScope;            //----(SA)	changed to int
 	int zoomTime;
 	float zoomSensitivity;
+#ifdef __SWITCH__
+	int aimTarget;              // the enemy under the aim (CG_AimAssist), -1 none: friction, magnetism, the red crosshair
+#endif
 	float zoomval;
 
 
@@ -1681,6 +1684,8 @@ extern vmCvar_t cg_fixedAspectFOV;
 #ifdef __SWITCH__
 extern vmCvar_t cg_aimFriction;
 extern vmCvar_t cg_aimFrictionRadius;
+extern vmCvar_t cg_aimMagnetism;
+void CG_Rumble( float low, float high, int milliseconds );
 #endif
 extern vmCvar_t cg_oldWolfUI;
 extern vmCvar_t cg_drawStatusHead;

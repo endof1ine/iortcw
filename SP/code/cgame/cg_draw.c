@@ -2484,6 +2484,14 @@ static void CG_DrawCrosshair( void ) {
 	} else {
 		trap_R_SetColor( NULL );
 	}
+#ifdef __SWITCH__
+	// (Halo's: red on an enemy under the aim, cg_view.c's CG_AimAssist)
+	if ( cg.aimTarget >= 0 && !friendInSights ) {
+		hcolor[0] = 1.0f;
+		hcolor[1] = hcolor[2] = 0.15f;
+		trap_R_SetColor( hcolor );
+	}
+#endif
 
 	w = h = cg_crosshairSize.value;
 
@@ -3843,6 +3851,19 @@ CG_StartShakeCamera
 */
 void CG_StartShakeCamera( float p, int duration, vec3_t src, float radius ) {
 	int i;
+
+#ifdef __SWITCH__
+	// (the controller shakes too: as hard as the camera, by the distance)
+	{
+		float distance = Distance( src, cg.refdef.vieworg );
+
+		if ( radius > 0 && distance < radius ) {
+			float strength = p * 12.0f * ( 1.0f - distance / radius );
+
+			CG_Rumble( strength, strength * 0.7f, duration );
+		}
+	}
+#endif
 
 	// find a free shake slot
 	for ( i = 0; i < MAX_CAMERA_SHAKE; i++ ) {

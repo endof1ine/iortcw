@@ -126,6 +126,18 @@ void CG_DamageFeedback( int yawByte, int pitchByte, int damage ) {
 	int slot;
 	viewDamage_t *vd;
 
+#ifdef __SWITCH__
+	// (the controller shakes with the hit, by how hard)
+	{
+		float strength = damage / 40.0f;
+
+		if ( strength > 1.0f ) {
+			strength = 1.0f;
+		}
+		CG_Rumble( 0.8f * strength, 0.6f * strength, 150 + 6 * ( damage < 40 ? damage : 40 ) );
+	}
+#endif
+
 	// show the attacking player's head and name in corner
 	cg.attackerTime = cg.time;
 
