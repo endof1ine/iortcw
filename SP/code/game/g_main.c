@@ -119,6 +119,10 @@ vmCvar_t g_scriptName;          // name of script file to run (instead of defaul
 vmCvar_t g_developer;
 
 vmCvar_t g_userAim;
+#ifdef __SWITCH__
+vmCvar_t g_aimAssist;
+vmCvar_t g_aimAssistAngle;
+#endif
 
 vmCvar_t g_forceModel;
 
@@ -234,6 +238,11 @@ cvarTable_t gameCvarTable[] = {
 	{ &g_rankings, "g_rankings", "0", 0, 0, qfalse},
 
 	{ &g_userAim, "g_userAim", "1", CVAR_CHEAT, 0, qfalse },
+#ifdef __SWITCH__
+	// (Halo's bullet magnetism for the controller: g_weapon.c's Bullet_AimAssist)
+	{ &g_aimAssist, "g_aimAssist", "1", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_aimAssistAngle, "g_aimAssistAngle", "3", CVAR_ARCHIVE, 0, qfalse },
+#endif
 
 	{ &g_forceModel, "cg_forceModel", "0", CVAR_ARCHIVE, 0, qfalse},
 	{ &g_smoothClients, "g_smoothClients", "1", 0, 0, qfalse},

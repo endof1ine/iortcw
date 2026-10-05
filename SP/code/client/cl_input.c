@@ -492,6 +492,10 @@ void CL_JoystickMove( usercmd_t *cmd ) {
 			pow( fabs( yawPush ), lookCurve->value ) * yawSpeed->value * boost;
 		pitch = ( j_pitch->value < 0 ? -1.0f : 1.0f ) * ( pitchPush < 0 ? -1.0f : 1.0f ) *
 			pow( fabs( pitchPush ), lookCurve->value ) * pitchSpeed->value;
+		// (the cgame's scale, as the mouse's: slower zoomed in, and on an
+		// enemy, cg_view.c's CG_AimFriction)
+		yaw *= cl.cgameSensitivity;
+		pitch *= cl.cgameSensitivity;
 		// (degrees a second: anglespeed is the frame's seconds)
 		anglespeed = seconds;
 	}

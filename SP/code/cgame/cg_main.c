@@ -168,6 +168,10 @@ vmCvar_t cg_simpleItems;
 vmCvar_t cg_fov;
 vmCvar_t cg_fixedAspect;
 vmCvar_t cg_fixedAspectFOV;
+#ifdef __SWITCH__
+vmCvar_t cg_aimFriction;
+vmCvar_t cg_aimFrictionRadius;
+#endif
 vmCvar_t cg_oldWolfUI;
 vmCvar_t cg_drawStatusHead;
 vmCvar_t cg_zoomFov;
@@ -304,6 +308,11 @@ cvarTable_t cvarTable[] = {
 	{ &cg_fov, "cg_fov", "90", CVAR_ARCHIVE },	// NOTE: there is already a dmflag (DF_FIXED_FOV) to allow server control of this cheat
 	{ &cg_fixedAspect, "cg_fixedAspect", "0", CVAR_ARCHIVE | CVAR_LATCH }, // Essentially the same as setting DF_FIXED_FOV for widescreen aspects
 	{ &cg_fixedAspectFOV, "cg_fixedAspectFOV", "1", CVAR_ARCHIVE },
+#ifdef __SWITCH__
+	// (Halo's aim friction for the controller: cg_view.c's CG_AimFriction)
+	{ &cg_aimFriction, "cg_aimFriction", "0.45", CVAR_ARCHIVE },
+	{ &cg_aimFrictionRadius, "cg_aimFrictionRadius", "40", CVAR_ARCHIVE },
+#endif
 	{ &cg_oldWolfUI, "cg_oldWolfUI", "0", CVAR_ARCHIVE },
 	{ &cg_drawStatusHead, "cg_drawStatusHead", "0", CVAR_ARCHIVE },
 	{ &cg_viewsize, "cg_viewsize", "100", CVAR_ARCHIVE },

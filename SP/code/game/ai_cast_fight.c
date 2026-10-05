@@ -464,6 +464,25 @@ qboolean AICast_SameTeam( cast_state_t *cs, int enemynum ) {
 
 }
 
+#ifdef __SWITCH__
+/*
+==================
+AICast_HostileTo
+
+The AI entitynum, not neutral, of another team than other's (the bullet
+magnetism's targets, g_weapon.c)
+==================
+*/
+qboolean AICast_HostileTo( int entitynum, int other ) {
+	cast_state_t *cs = AICast_GetCastState( entitynum );
+
+	if ( !cs || g_entities[entitynum].aiTeam == AITEAM_NEUTRAL ) {
+		return qfalse;
+	}
+	return !AICast_SameTeam( cs, other );
+}
+#endif
+
 /*
 ==================
 AICast_WeaponRange

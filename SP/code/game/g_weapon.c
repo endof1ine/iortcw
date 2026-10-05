@@ -887,9 +887,67 @@ void Bullet_Endpos( gentity_t *ent, float spread, vec3_t *end ) {
 Bullet_Fire
 ==============
 */
+#ifdef __SWITCH__
+/*
+==============
+Bullet_AimAssist
+
+Halo's bullet magnetism, for a controller: the player's shot goes to the
+middle of the visible enemy nearest the aim within g_aimAssistAngle degrees
+(not allies, nor civilians), its spread kept around that
+==============
+*/
+static void Bullet_AimAssist( gentity_t *ent ) {
+	float best;
+	vec3_t bestDir, angles;
+	qboolean found = qfalse;
+	int i;
+
+	if ( !g_aimAssist.integer || !ent->client || ent->aiCharacter || g_aimAssistAngle.value <= 0 ) {
+		return;
+	}
+	best = cos( DEG2RAD( g_aimAssistAngle.value ) );
+	for ( i = 0; i < level.num_entities; i++ ) {
+		gentity_t *target = &g_entities[i];
+		vec3_t point, dir;
+		float dot;
+		trace_t tr;
+
+		if ( !target->inuse || !target->aiCharacter || target->health <= 0 || target == ent ) {
+			continue;
+		}
+		if ( !AICast_HostileTo( target->s.number, ent->s.number ) ) {
+			continue;
+		}
+		VectorAdd( target->r.absmin, target->r.absmax, point );
+		VectorScale( point, 0.5f, point );
+		VectorSubtract( point, muzzleTrace, dir );
+		VectorNormalize( dir );
+		dot = DotProduct( dir, forward );
+		if ( dot <= best ) {
+			continue;
+		}
+		trap_Trace( &tr, muzzleTrace, NULL, NULL, point, ent->s.number, MASK_SHOT );
+		if ( tr.entityNum != target->s.number ) {
+			continue;
+		}
+		best = dot;
+		VectorCopy( dir, bestDir );
+		found = qtrue;
+	}
+	if ( found ) {
+		vectoangles( bestDir, angles );
+		AngleVectors( angles, forward, right, up );
+	}
+}
+#endif
+
 void Bullet_Fire( gentity_t *ent, float spread, int damage ) {
 	vec3_t end;
 
+#ifdef __SWITCH__
+	Bullet_AimAssist( ent );
+#endif
 	Bullet_Endpos( ent, spread, &end );
 	Bullet_Fire_Extended( ent, ent, muzzleTrace, end, spread, damage, 0 );
 }

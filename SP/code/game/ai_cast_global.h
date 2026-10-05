@@ -46,6 +46,9 @@ struct cast_state_s;
 extern qboolean saveGamePending;
 
 qboolean AICast_SameTeam( struct cast_state_s *cs, int enemynum );
+#ifdef __SWITCH__
+qboolean AICast_HostileTo( int entitynum, int other );
+#endif
 struct cast_state_s *AICast_GetCastState( int entitynum );
 void AICast_ScriptLoad( void );
 void AICast_ScriptEvent( struct cast_state_s *cs, char *eventStr, char *params );

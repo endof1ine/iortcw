@@ -1437,6 +1437,60 @@ extern void CG_SetupDlightstyles( void );
 #define DEBUGTIME
 #endif
 
+#ifdef __SWITCH__
+/*
+=================
+CG_AimFriction
+
+Halo's aim friction, for the controller: the look slowed (the sensitivity the
+client gets: cg_aimFriction of it) while the aim is on a living, visible
+enemy - within cg_aimFrictionRadius units of its chest, at its distance, and
+never less than 1.5 degrees, so far ones get help too. Enemies by character:
+not the allies, nor civilians.
+=================
+*/
+static void CG_AimFriction( void ) {
+	int i;
+
+	if ( cg_aimFriction.value >= 1.0f || cg_aimFriction.value <= 0.0f || !cg.snap ) {
+		return;
+	}
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		centity_t *cent = &cg_entities[i];
+		int aiChar = cent->currentState.aiChar;
+		vec3_t point, dir;
+		float distance, cone;
+		trace_t trace;
+
+		if ( !cent->currentValid || i == cg.snap->ps.clientNum || aiChar == AICHAR_NONE ||
+			aiChar == AICHAR_AMERICAN || aiChar == AICHAR_PARTISAN || aiChar == AICHAR_CIVILIAN ||
+			( cent->currentState.eFlags & EF_DEAD ) ) {
+			continue;
+		}
+		VectorCopy( cent->lerpOrigin, point );
+		point[2] += 16;
+		VectorSubtract( point, cg.refdef.vieworg, dir );
+		distance = VectorNormalize( dir );
+		if ( distance < 1.0f ) {
+			continue;
+		}
+		cone = atan2( cg_aimFrictionRadius.value, distance );
+		if ( cone < DEG2RAD( 1.5f ) ) {
+			cone = DEG2RAD( 1.5f );
+		}
+		if ( DotProduct( dir, cg.refdef.viewaxis[0] ) < cos( cone ) ) {
+			continue;
+		}
+		CG_Trace( &trace, cg.refdef.vieworg, NULL, NULL, point, cg.snap->ps.clientNum, MASK_SHOT );
+		if ( trace.fraction < 1.0f && trace.entityNum != i ) {
+			continue;
+		}
+		cg.zoomSensitivity *= cg_aimFriction.value;
+		return;
+	}
+}
+#endif
+
 /*
 =================
 CG_DrawActiveFrame
@@ -1629,6 +1683,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 
 	DEBUGTIME
 
+#ifdef __SWITCH__
+	CG_AimFriction();
+#endif
 	// let the client system know what our weapon, holdable item and zoom settings are
 	trap_SetUserCmdValue( cg.weaponSelect, cg.holdableSelect, cg.zoomSensitivity, cg.cld );
 

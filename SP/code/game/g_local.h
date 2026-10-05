@@ -1129,6 +1129,10 @@ extern vmCvar_t g_scriptName;           // name of script file to run (instead o
 extern vmCvar_t g_scriptDebug;
 
 extern vmCvar_t g_userAim;
+#ifdef __SWITCH__
+extern vmCvar_t g_aimAssist;
+extern vmCvar_t g_aimAssistAngle;
+#endif
 
 extern vmCvar_t g_forceModel;
 
