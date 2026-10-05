@@ -2887,6 +2887,36 @@ void Com_Frame( void ) {
 		sv -= time_game;
 		cl -= time_frontend + time_backend;
 
+#ifdef __SWITCH__
+		// (2: a line every 10 seconds instead, for measuring on the console)
+		if ( com_speeds->integer == 2 ) {
+			static int start, last, frames, worst, slow, sums[6];
+			int now = Sys_Milliseconds( );
+			int parts[6] = { all, sv, ev, cl, time_frontend, time_backend };
+			int i;
+
+			if ( last ) {
+				frames++;
+				worst = MAX( worst, now - last );
+				slow += now - last > 20;
+				for ( i = 0; i < 6; i++ ) {
+					sums[i] += parts[i];
+				}
+			} else {
+				start = now;
+			}
+			last = now;
+			if ( frames && now - start >= 10000 ) {
+				Com_Printf( "speeds %s: %.1f fps, worst %d ms, %d of %d over 20 ms; ms a frame: all %.1f sv %.1f ev %.1f cl %.1f rf %.1f bk %.1f\n",
+					Cvar_VariableString( "mapname" ), frames * 1000.0f / ( now - start ), worst, slow, frames,
+					sums[0] / (float)frames, sums[1] / (float)frames, sums[2] / (float)frames,
+					sums[3] / (float)frames, sums[4] / (float)frames, sums[5] / (float)frames );
+				start = now;
+				frames = worst = slow = 0;
+				memset( sums, 0, sizeof( sums ) );
+			}
+		} else
+#endif
 		Com_Printf( "frame:%i all:%3i sv:%3i ev:%3i cl:%3i gm:%3i rf:%3i bk:%3i\n",
 					com_frameNumber, all, sv, ev, cl, time_game, time_frontend, time_backend );
 	}

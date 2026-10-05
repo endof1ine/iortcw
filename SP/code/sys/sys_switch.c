@@ -438,6 +438,8 @@ void Sys_PlatformInit( void )
 	socketInitializeDefault();
 	nxlinkStdio();
 	setvbuf( stdout, NULL, _IONBF, 0 );
+	// (the port's own game files inside the program, files.c's romfs:)
+	romfsInit();
 	Sys_SetFloatEnv();
 	stdinIsATTY = qfalse;
 }

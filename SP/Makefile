@@ -2996,12 +2996,13 @@ $(eval $(call SWITCH_MODULE_RULE,ui,$$(Q3UIOBJ)))
 
 # the homebrew program: the executable, its title and its icon
 TARGETS += $(B)/iortcw.nro
-$(B)/iortcw.nro: $(B)/$(CLIENTBIN)$(FULLBINEXT) misc/wolf512.png
+$(B)/iortcw.nro: $(B)/$(CLIENTBIN)$(FULLBINEXT) misc/wolf512.png $(wildcard misc/switch/romfs/main/ui/*)
 	$(echo_cmd) "NRO $@"
 	$(Q)convert misc/wolf512.png -resize 256x256 -background black -flatten -quality 90 $(B)/iortcw_icon.jpg
 	$(Q)$(DEVKITPRO)/tools/bin/nacptool --create "Return to Castle Wolfenstein" "iortcw" "$(VERSION)" \
 		$(B)/iortcw.nacp > /dev/null
-	$(Q)$(DEVKITPRO)/tools/bin/elf2nro $< $@ --nacp=$(B)/iortcw.nacp --icon=$(B)/iortcw_icon.jpg > /dev/null
+	$(Q)$(DEVKITPRO)/tools/bin/elf2nro $< $@ --nacp=$(B)/iortcw.nacp --icon=$(B)/iortcw_icon.jpg \
+		--romfsdir=misc/switch/romfs > /dev/null
 endif
 
 #############################################################################

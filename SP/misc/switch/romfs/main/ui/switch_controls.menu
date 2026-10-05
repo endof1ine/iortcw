@@ -1,0 +1,204 @@
+// Written by gen_menus.py: the Switch's controller settings
+#include "ui/menudef.h"
+
+{
+menuDef {
+	name "control_menu"
+	visible 0
+	fullscreen 0
+	rect 100 125 443 340
+	focusColor 1 .75 0 1
+	style 1
+	border 1
+	onEsc {
+		close control_menu ;
+		close setup_menu ;
+		open main
+	}
+
+	itemDef {
+		name window
+		rect 0 2 443 300
+		style WINDOW_STYLE_FILLED
+		border 1
+		bordercolor .5 .5 .5 .5
+		forecolor 1 1 1 1
+		backcolor 0 0 0 .25
+		visible 1
+		decoration
+	}
+	itemDef {
+		name title
+		text "Controller"
+		rect 2 4 439 20
+		style WINDOW_STYLE_FILLED
+		border 1
+		bordercolor .1 .1 .1 .2
+		backcolor .3 0.5 0.2 .25
+		textalign ITEM_ALIGN_CENTER
+		textalignx 219
+		textaligny 14
+		textscale .23
+		forecolor 1 1 1 1
+		visible 1
+		decoration
+	}
+	itemDef {
+		name setting
+		text "Look Speed, Horizontal:"
+		type ITEM_TYPE_SLIDER
+		cvarfloat "j_yawSpeed" 180 90 360
+		rect 82 32 290 12
+		textalign ITEM_ALIGN_RIGHT
+		textalignx 142
+		textaligny 10
+		textscale .23
+		style WINDOW_STYLE_FILLED
+		backcolor 1 1 1 .07
+		forecolor 1 1 1 1
+		visible 1
+	}
+	itemDef {
+		name setting
+		text "Look Speed, Vertical:"
+		type ITEM_TYPE_SLIDER
+		cvarfloat "j_pitchSpeed" 100 50 200
+		rect 82 47 290 12
+		textalign ITEM_ALIGN_RIGHT
+		textalignx 142
+		textaligny 10
+		textscale .23
+		style WINDOW_STYLE_FILLED
+		backcolor 1 1 1 .07
+		forecolor 1 1 1 1
+		visible 1
+	}
+	itemDef {
+		name setting
+		text "Invert Look:"
+		type ITEM_TYPE_MULTI
+		cvar "j_pitch"
+		cvarFloatList { "No" 0.022 "Yes" -0.022 }
+		rect 82 62 290 12
+		textalign ITEM_ALIGN_RIGHT
+		textalignx 142
+		textaligny 10
+		textscale .23
+		style WINDOW_STYLE_FILLED
+		backcolor 1 1 1 .07
+		forecolor 1 1 1 1
+		visible 1
+	}
+	itemDef {
+		name setting
+		text "Look Response:"
+		type ITEM_TYPE_MULTI
+		cvar "j_lookCurve"
+		cvarFloatList { "Smooth" 2 "Linear" 1 "Precise" 3 }
+		rect 82 77 290 12
+		textalign ITEM_ALIGN_RIGHT
+		textalignx 142
+		textaligny 10
+		textscale .23
+		style WINDOW_STYLE_FILLED
+		backcolor 1 1 1 .07
+		forecolor 1 1 1 1
+		visible 1
+	}
+	itemDef {
+		name setting
+		text "Turn Boost:"
+		type ITEM_TYPE_MULTI
+		cvar "j_lookBoost"
+		cvarFloatList { "On" 1.5 "Off" 1 }
+		rect 82 92 290 12
+		textalign ITEM_ALIGN_RIGHT
+		textalignx 142
+		textaligny 10
+		textscale .23
+		style WINDOW_STYLE_FILLED
+		backcolor 1 1 1 .07
+		forecolor 1 1 1 1
+		visible 1
+	}
+	itemDef {
+		name setting
+		text "Stick Deadzone:"
+		type ITEM_TYPE_MULTI
+		cvar "joy_threshold"
+		cvarFloatList { "Normal" 0.15 "Small" 0.08 "Large" 0.25 }
+		rect 82 107 290 12
+		textalign ITEM_ALIGN_RIGHT
+		textalignx 142
+		textaligny 10
+		textscale .23
+		style WINDOW_STYLE_FILLED
+		backcolor 1 1 1 .07
+		forecolor 1 1 1 1
+		visible 1
+	}
+	itemDef {
+		name setting
+		text "Aim Slowdown:"
+		type ITEM_TYPE_MULTI
+		cvar "cg_aimFriction"
+		cvarFloatList { "Normal" 0.45 "Strong" 0.3 "Light" 0.65 "Off" 0 }
+		rect 82 130 290 12
+		textalign ITEM_ALIGN_RIGHT
+		textalignx 142
+		textaligny 10
+		textscale .23
+		style WINDOW_STYLE_FILLED
+		backcolor 1 1 1 .07
+		forecolor 1 1 1 1
+		visible 1
+	}
+	itemDef {
+		name setting
+		text "Aim Magnetism:"
+		type ITEM_TYPE_MULTI
+		cvar "cg_aimMagnetism"
+		cvarFloatList { "Normal" 0.6 "Strong" 0.85 "Light" 0.35 "Off" 0 }
+		rect 82 145 290 12
+		textalign ITEM_ALIGN_RIGHT
+		textalignx 142
+		textaligny 10
+		textscale .23
+		style WINDOW_STYLE_FILLED
+		backcolor 1 1 1 .07
+		forecolor 1 1 1 1
+		visible 1
+	}
+	itemDef {
+		name setting
+		text "Bullet Magnetism:"
+		type ITEM_TYPE_YESNO
+		cvar "g_aimAssist"
+		rect 82 160 290 12
+		textalign ITEM_ALIGN_RIGHT
+		textalignx 142
+		textaligny 10
+		textscale .23
+		style WINDOW_STYLE_FILLED
+		backcolor 1 1 1 .07
+		forecolor 1 1 1 1
+		visible 1
+	}
+	itemDef {
+		name setting
+		text "Vibration:"
+		type ITEM_TYPE_MULTI
+		cvar "in_rumble"
+		cvarFloatList { "Normal" 1 "Strong" 1.5 "Light" 0.5 "Off" 0 }
+		rect 82 183 290 12
+		textalign ITEM_ALIGN_RIGHT
+		textalignx 142
+		textaligny 10
+		textscale .23
+		style WINDOW_STYLE_FILLED
+		backcolor 1 1 1 .07
+		forecolor 1 1 1 1
+		visible 1
+	}
+}
+}

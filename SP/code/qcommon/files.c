@@ -3621,6 +3621,11 @@ static void FS_Startup( const char *gameName )
 	}
 #endif
 
+#ifdef __SWITCH__
+	// (the port's own files inside the program, its controller menus: the
+	// lowest priority, so ones on the SD card replace them)
+	FS_AddGameDirectory( "romfs:", gameName );
+#endif
 	if ( fs_basepath->string[0] ) {
 		FS_AddGameDirectory( fs_basepath->string, gameName );
 	}

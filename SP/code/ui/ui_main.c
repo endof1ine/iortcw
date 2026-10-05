@@ -1020,6 +1020,36 @@ qboolean Load_Menu( int handle ) {
 	return qfalse;
 }
 
+#ifdef __SWITCH__
+/*
+==============
+UI_SwitchMenus
+
+The Controls menus, main and in-game, replaced by the port's controller
+settings (romfs, misc/switch/gen_menus.py) under their names, so every open
+and close of them reaches these: the keyboard binds can't take the pad's
+buttons, which work the menus. The originals stay, renamed <name>_keys
+==============
+*/
+static void UI_SwitchMenus( void ) {
+	static const char *menus[][2] = {
+		{ "control_menu", "ui/switch_controls.menu" },
+		{ "ingame_controls", "ui/switch_ingame_controls.menu" },
+	};
+	int i;
+
+	for ( i = 0; i < ARRAY_LEN( menus ); i++ ) {
+		menuDef_t *original = Menus_FindByName( menus[i][0] );
+
+		if ( !original || Menus_FindByName( va( "%s_keys", menus[i][0] ) ) ) {
+			continue;
+		}
+		original->window.name = String_Alloc( va( "%s_keys", menus[i][0] ) );
+		UI_ParseMenu( menus[i][1] );
+	}
+}
+#endif
+
 void UI_LoadMenus( const char *menuFile, qboolean reset ) {
 	pc_token_t token;
 	int handle;
@@ -1070,6 +1100,9 @@ void UI_LoadMenus( const char *menuFile, qboolean reset ) {
 	Com_DPrintf( "UI menu load time = %d milli seconds\n", trap_Milliseconds() - start );
 
 	trap_PC_FreeSource( handle );
+#ifdef __SWITCH__
+	UI_SwitchMenus();
+#endif
 }
 
 
