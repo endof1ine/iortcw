@@ -1959,9 +1959,9 @@ void Com_ExecuteCfg(void)
 	}
 #ifdef __SWITCH__
 	Key_SwitchDefaultBinds( );
-	// (a 16:9 screen: the menus, the HUD and the movies at their own 4:3,
-	// not stretched, unless a config says otherwise; the modules' own
-	// defaults leave a value that is there)
+	// (a 16:9 screen: the HUD at its own shape, on the screen's edges, unless
+	// a config says otherwise; the module's own default leaves a value that
+	// is there. The menus, loading screens and movies stretch: ui_fixedAspect)
 	Cvar_Get( "cg_fixedAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	// (full texture detail: picmip 1, half of it, was for the graphics cards
 	// of 2001; the menus' texture quality changes it)

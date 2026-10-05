@@ -1663,9 +1663,14 @@ void CIN_DrawCinematic( int handle ) {
 	buf = cinTable[handle].buf;
 	SCR_AdjustFrom640( &x, &y, &w, &h );
 
-	// with cg_fixedAspect (the menus and the HUD at their 4:3) on a wider
-	// screen: the movie at 4:3 too, centred, black at its sides
+	// with the menus' fixed aspect (cg_fixedAspect, on the Switch
+	// ui_fixedAspect) on a wider screen: the movie at 4:3 too, centred, black
+	// at its sides
+#ifdef __SWITCH__
+	if ( Cvar_VariableIntegerValue( "ui_fixedAspect" ) &&
+#else
 	if ( Cvar_VariableIntegerValue( "cg_fixedAspect" ) &&
+#endif
 		cls.glconfig.vidWidth * 480 > cls.glconfig.vidHeight * 640 ) {
 		float scale = cls.glconfig.vidHeight / 480.0f;
 		float bias = 0.5f * ( cls.glconfig.vidWidth - 640.0f * scale );
