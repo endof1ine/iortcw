@@ -520,6 +520,10 @@ static void IN_InitJoystick( void )
 		Cvar_Set( "in_joystickNo", "0" );
 
 	in_joystickUseAnalog = Cvar_Get( "in_joystickUseAnalog", "0", CVAR_ARCHIVE );
+#ifdef __SWITCH__
+	// (the sticks analog: digital ones would walk and turn at one speed)
+	Cvar_Set( "in_joystickUseAnalog", "1" );
+#endif
 
 	stick = SDL_JoystickOpen( in_joystickNo->integer );
 
@@ -532,6 +536,10 @@ static void IN_InitJoystick( void )
 		gamepad = SDL_GameControllerOpen(in_joystickNo->integer);
 
 	Com_DPrintf( "Joystick %d opened\n", in_joystickNo->integer );
+#ifdef __SWITCH__
+	Com_Printf( "Controller %d: %s, %s\n", in_joystickNo->integer, SDL_JoystickNameForIndex( in_joystickNo->integer ),
+		gamepad ? "a gamepad" : "not a gamepad (no input)" );
+#endif
 	Com_DPrintf( "Name:       %s\n", SDL_JoystickNameForIndex(in_joystickNo->integer) );
 	Com_DPrintf( "Axes:       %d\n", SDL_JoystickNumAxes(stick) );
 	Com_DPrintf( "Hats:       %d\n", SDL_JoystickNumHats(stick) );
@@ -647,13 +655,93 @@ static qboolean KeyToAxisAndSign(int keynum, int *outAxis, int *outSign)
 IN_GamepadMove
 ===============
 */
+#ifdef __SWITCH__
+/*
+=================
+IN_SwitchMenuKey
+
+The Switch's controller is its only input, and the menus and the console
+take keys, not pad buttons: there A is enter, B escape and the d-pad the
+arrows; + is escape everywhere (the menu, as the keyboard's). 0: the pad's own
+key.
+=================
+*/
+static int IN_SwitchMenuKey( int button )
+{
+	if ( button == SDL_CONTROLLER_BUTTON_START )
+		return K_ESCAPE;
+	if ( !( Key_GetCatcher( ) & ( KEYCATCH_UI | KEYCATCH_CONSOLE ) ) )
+		return 0;
+	switch ( button )
+	{
+		case SDL_CONTROLLER_BUTTON_A:          return K_ENTER;
+		case SDL_CONTROLLER_BUTTON_B:          return K_ESCAPE;
+		case SDL_CONTROLLER_BUTTON_DPAD_UP:    return K_UPARROW;
+		case SDL_CONTROLLER_BUTTON_DPAD_DOWN:  return K_DOWNARROW;
+		case SDL_CONTROLLER_BUTTON_DPAD_LEFT:  return K_LEFTARROW;
+		case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return K_RIGHTARROW;
+		default:                               return 0;
+	}
+}
+
+/*
+=================
+IN_SwitchMenuCursor
+
+In the menus either stick moves the cursor, 400 of the menus' 640 units a
+second at full tilt
+=================
+*/
+static void IN_SwitchMenuCursor( void )
+{
+	static int lastTime;
+	static float restX, restY;
+	int now = Sys_Milliseconds( );
+	float seconds = lastTime ? ( now - lastTime ) / 1000.0f : 0.0f;
+	float x = 0.0f, y = 0.0f;
+	int stickAxes[2][2] = { { SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY },
+		{ SDL_CONTROLLER_AXIS_RIGHTX, SDL_CONTROLLER_AXIS_RIGHTY } };
+	int s;
+
+	lastTime = now;
+	if ( !( Key_GetCatcher( ) & KEYCATCH_UI ) || seconds <= 0.0f || seconds > 0.1f )
+		return;
+	for ( s = 0; s < 2; s++ )
+	{
+		float sx = SDL_GameControllerGetAxis( gamepad, stickAxes[s][0] ) / 32767.0f;
+		float sy = SDL_GameControllerGetAxis( gamepad, stickAxes[s][1] ) / 32767.0f;
+
+		if ( fabs( sx ) > in_joystickThreshold->value )
+			x += sx;
+		if ( fabs( sy ) > in_joystickThreshold->value )
+			y += sy;
+	}
+	restX += x * 400.0f * seconds;
+	restY += y * 400.0f * seconds;
+	if ( (int)restX || (int)restY )
+	{
+		Com_QueueEvent( in_eventTime, SE_MOUSE, (int)restX, (int)restY, 0, NULL );
+		restX -= (int)restX;
+		restY -= (int)restY;
+	}
+}
+#endif
+
 static void IN_GamepadMove( void )
 {
 	int i;
 	int translatedAxes[MAX_JOYSTICK_AXIS];
 	qboolean translatedAxesSet[MAX_JOYSTICK_AXIS];
+#ifdef __SWITCH__
+	// (the key each button sent when pressed, which its release sends too)
+	static int menuKeys[SDL_CONTROLLER_BUTTON_MAX];
+#endif
 
 	SDL_GameControllerUpdate();
+
+#ifdef __SWITCH__
+	IN_SwitchMenuCursor( );
+#endif
 
 	// check buttons
 	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++)
@@ -661,6 +749,15 @@ static void IN_GamepadMove( void )
 		qboolean pressed = SDL_GameControllerGetButton(gamepad, SDL_CONTROLLER_BUTTON_A + i);
 		if (pressed != stick_state.buttons[i])
 		{
+#ifdef __SWITCH__
+			if ( pressed )
+				menuKeys[i] = IN_SwitchMenuKey( i );
+			if ( menuKeys[i] ) {
+				Com_QueueEvent(in_eventTime, SE_KEY, menuKeys[i], pressed, 0, NULL);
+				stick_state.buttons[i] = pressed;
+				continue;
+			}
+#endif
 #if SDL_VERSION_ATLEAST( 2, 0, 14 )
 			if ( i >= SDL_CONTROLLER_BUTTON_MISC1 ) {
 				Com_QueueEvent(in_eventTime, SE_KEY, K_PAD0_MISC1 + i - SDL_CONTROLLER_BUTTON_MISC1, pressed, 0, NULL);

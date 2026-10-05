@@ -1935,6 +1935,10 @@ For controlling environment variables
 ==================
 */
 
+#ifdef __SWITCH__
+void Key_SwitchDefaultBinds( void );
+#endif
+
 void Com_ExecuteCfg(void)
 {
 	Cbuf_ExecuteText(EXEC_NOW, "exec default.cfg\n");
@@ -1953,6 +1957,9 @@ void Com_ExecuteCfg(void)
 		Cbuf_ExecuteText(EXEC_NOW, "exec autoexec.cfg\n");
 		Cbuf_Execute();
 	}
+#ifdef __SWITCH__
+	Key_SwitchDefaultBinds( );
+#endif
 }
 
 /*

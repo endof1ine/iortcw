@@ -491,6 +491,19 @@ void Sys_OpenURL( char *url, qboolean doexit )
 }
 
 /*
+==============
+Sys_SwitchDocked
+
+1 when the Switch is docked (a television of 1080 lines), 0 in handheld
+mode (the screen's 720)
+==============
+*/
+int Sys_SwitchDocked( void )
+{
+	return appletGetOperationMode() == AppletOperationMode_Console;
+}
+
+/*
 ==============================================================
 
 THE GAME MODULES, LINKED IN

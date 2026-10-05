@@ -1981,6 +1981,57 @@ void Key_Unbindall_f( void ) {
 }
 
 
+#ifdef __SWITCH__
+/*
+===================
+Key_SwitchDefaultBinds
+
+The Switch's controller: the pad's buttons that no config binds (default.cfg
+binds none; wolfconfig.cfg has the controls menu's) get these, after the
+configs. + is the menu, the keyboard's escape (sdl_input.c).
+===================
+*/
+void Key_SwitchDefaultBinds( void )
+{
+	static const char *const binds[][2] =
+	{
+		{ "PAD0_LEFTSTICK_UP", "+forward" },
+		{ "PAD0_LEFTSTICK_DOWN", "+back" },
+		{ "PAD0_LEFTSTICK_LEFT", "+moveleft" },
+		{ "PAD0_LEFTSTICK_RIGHT", "+moveright" },
+		{ "PAD0_RIGHTSTICK_UP", "+lookup" },
+		{ "PAD0_RIGHTSTICK_DOWN", "+lookdown" },
+		{ "PAD0_RIGHTSTICK_LEFT", "+left" },
+		{ "PAD0_RIGHTSTICK_RIGHT", "+right" },
+		{ "PAD0_RIGHTTRIGGER", "+attack" },
+		{ "PAD0_LEFTTRIGGER", "weapalt" },
+		{ "PAD0_RIGHTSHOULDER", "weapnext" },
+		{ "PAD0_LEFTSHOULDER", "weapprev" },
+		{ "PAD0_A", "+moveup" },
+		{ "PAD0_B", "+movedown" },
+		{ "PAD0_X", "+reload" },
+		{ "PAD0_Y", "+activate" },
+		{ "PAD0_LEFTSTICK_CLICK", "+sprint" },
+		{ "PAD0_RIGHTSTICK_CLICK", "+kick" },
+		{ "PAD0_DPAD_LEFT", "+leanleft" },
+		{ "PAD0_DPAD_RIGHT", "+leanright" },
+		{ "PAD0_DPAD_UP", "+zoom" },
+		{ "PAD0_DPAD_DOWN", "+useitem" },
+		{ "PAD0_BACK", "notebook" },
+	};
+	int i;
+
+	for ( i = 0; i < ARRAY_LEN( binds ); i++ )
+	{
+		int key = Key_StringToKeynum( (char *)binds[i][0] );
+		const char *binding = key >= 0 ? Key_GetBinding( key ) : NULL;
+
+		if ( key >= 0 && ( !binding || !binding[0] ) )
+			Key_SetBinding( key, binds[i][1] );
+	}
+}
+#endif
+
 /*
 ===================
 Key_Bind_f
