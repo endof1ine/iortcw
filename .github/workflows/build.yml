@@ -1,0 +1,204 @@
+name: Build
+
+# Debug and release builds of the Nintendo Switch port (single player, SP/)
+# for every pushed commit, uploaded as artifacts.
+#
+# Kept cheap:
+# - one job builds both configurations, so its set-up is paid once;
+# - compiles go through ccache, whose cache carries over from run to run, so
+#   a commit only recompiles what it changed;
+# - a newer push to the same branch cancels a run still going;
+# - pushes that only change documentation do not build;
+# - artifacts are kept for three days.
+#
+# A successful build of the default branch is also published as a GitHub
+# release, the newest marked latest, so that
+# https://github.com/<repository>/releases/latest/download/iortcw-switch-release.zip
+# always gives the latest build; the last five are kept.
+on:
+  push:
+    paths-ignore:
+      - "**.md"
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_MAXSIZE: 500M
+
+jobs:
+  switch:
+    # devkitPro's image has devkitA64, libnx and the Switch's SDL 2, Mesa and
+    # libjpeg-turbo; ImageMagick makes the program's icon.
+    runs-on: ubuntu-24.04-arm
+    container: devkitpro/devkita64:latest
+    timeout-minutes: 40
+    steps:
+      - name: Install the tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git make ccache imagemagick zip
+
+      - uses: actions/checkout@v4
+
+      # (the program's version comes from git, in a checkout owned by another
+      # user than the container's)
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-switch-${{ github.sha }}
+          restore-keys: ccache-switch-
+
+      - name: Debug
+        working-directory: SP
+        run: make -j"$(nproc)" PLATFORM=switch debug CC="ccache $DEVKITPRO/devkitA64/bin/aarch64-none-elf-gcc"
+
+      - name: Release
+        working-directory: SP
+        run: make -j"$(nproc)" PLATFORM=switch release CC="ccache $DEVKITPRO/devkitA64/bin/aarch64-none-elf-gcc"
+
+      - name: Compile cache
+        run: ccache --show-stats
+
+      # each build as the SD card has it: switch/iortcw/iortcw.nro, with the
+      # install notes and the license beside the switch folder
+      - name: Package
+        run: |
+          for config in debug release; do
+            dist="dist/iortcw-switch-$config"
+            mkdir -p "$dist/switch/iortcw"
+            cp "SP/build/$config-switch-aarch64/iortcw.nro" "$dist/switch/iortcw/"
+            cp SP/misc/switch/README-switch.txt "$dist/README.txt"
+            cp SP/COPYING.txt "$dist/"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iortcw-switch-debug
+          path: dist/iortcw-switch-debug
+          retention-days: 3
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iortcw-switch-release
+          path: dist/iortcw-switch-release
+          retention-days: 3
+
+  release:
+    # The two builds as a release, tagged build-<run number> and marked
+    # latest (every file keeps its name from release to release, for the
+    # latest/download links); then all but the newest five build-* releases
+    # go, tags and all. Only for the default branch.
+    needs: [switch]
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.publish.outputs.tag }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: iortcw-*
+          path: artifacts
+
+      - name: Package
+        run: |
+          mkdir release
+          for build in artifacts/*/; do
+            name="$(basename "$build")"
+            (cd "$build" && zip -qr "$GITHUB_WORKSPACE/release/$name.zip" .)
+          done
+          ls -l release
+
+      - name: Publish
+        id: publish
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          tag="build-$GITHUB_RUN_NUMBER"
+          subject="$(printf '%s' "${MESSAGE:-manual run}" | head -n 1)"
+          printf '%s\n\nCommit: %s\nBuild: %s\n\nUnzip at the root of the SD card, then add the game data from your own copy (README.txt). The release build is for playing; the debug build is slower and checks more.\n' \
+            "$subject" "$COMMIT_URL" "$RUN_URL" > notes.md
+          gh release create "$tag" release/*.zip --target "$GITHUB_SHA" --latest \
+            --title "Build $GITHUB_RUN_NUMBER (${GITHUB_SHA:0:7})" --notes-file notes.md
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the last five
+        run: |
+          gh release list --limit 100 --json tagName,createdAt \
+            --jq '[.[] | select(.tagName | startswith("build-"))] | sort_by(.createdAt) | reverse | .[5:] | .[].tagName' |
+          while read -r tag; do
+            gh release delete "$tag" --cleanup-tag --yes
+          done
+
+  notify:
+    # A Discord embed for the run, to the DISCORD_WEBHOOK secret (nothing
+    # without it): green when the build succeeded, red when not, with this
+    # run's release (default branch only) and a link to the latest build.
+    needs: [switch, release]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Post to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          SWITCH: ${{ needs.switch.result }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+          SERVER: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "no DISCORD_WEBHOOK secret: nothing to post"
+            exit 0
+          fi
+          if [ "$SWITCH" = success ]; then
+            title="Build succeeded"; color=5763719; status="✅ Built"
+          else
+            title="Build failed"; color=15548997; status="❌ $SWITCH"
+          fi
+          latest="$SERVER/$REPOSITORY/releases/latest"
+          downloads="[Switch]($latest/download/iortcw-switch-release.zip) ([all builds]($latest))"
+          if [ -n "$RELEASE_TAG" ]; then
+            release="[$RELEASE_TAG]($SERVER/$REPOSITORY/releases/tag/$RELEASE_TAG)"
+          else
+            release="none (only the default branch publishes)"
+          fi
+          subject="$(printf '%s' "${MESSAGE:-manual run}" | head -n 1)"
+          payload="$(jq -n \
+            --arg title "$title" --argjson color "$color" --arg url "$RUN_URL" \
+            --arg description "[\`${SHA:0:7}\`]($COMMIT_URL) $subject" \
+            --arg branch "$BRANCH" --arg actor "$ACTOR" --arg switch "$status" \
+            --arg release "$release" --arg downloads "$downloads" \
+            '{embeds: [{title: ("iortcw: " + $title), url: $url, color: $color, description: $description,
+              fields: [
+                {name: "Branch", value: $branch, inline: true},
+                {name: "By", value: $actor, inline: true},
+                {name: "Switch", value: $switch, inline: true},
+                {name: "Release", value: $release},
+                {name: "Latest builds", value: $downloads}
+              ]}]}')"
+          curl -fsS -H "Content-Type: application/json" -d "$payload" "$WEBHOOK"
